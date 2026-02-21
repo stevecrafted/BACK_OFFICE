@@ -80,16 +80,16 @@ public class VoitureController {
     @PostMapping("/voitures/create")
     public ModelView creerVoiture(
             @AnnotationRequestParam("capacite") int capacite,
-            @AnnotationRequestParam("ref") String ref,
             @AnnotationRequestParam("idCarburant") int idCarburant) {
 
-        Voiture voiture = new Voiture(capacite, ref, idCarburant);
+        // Le ref sera généré automatiquement basé sur l'ID
+        Voiture voiture = new Voiture(capacite, "", idCarburant);
 
         ModelView mv = new ModelView();
 
         if (voitureDAO.create(voiture)) {
             mv.setView("redirect:/voitures");
-            mv.addAttribute("message", "Voiture créée avec succès");
+            mv.addAttribute("message", "Voiture créée avec succès - Ref: " + voiture.getRef());
         } else {
             mv.setView("voitures/form.jsp");
             mv.addAttribute("error", "Erreur lors de la création");

@@ -17,7 +17,8 @@ public class VoitureDAO {
                 PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             stmt.setInt(1, voiture.getCapacite());
-            stmt.setString(2, voiture.getRef());
+            // Le ref sera mis à jour après avoir récupéré l'ID
+            stmt.setString(2, "TEMP"); // Valeur temporaire
             stmt.setInt(3, voiture.getIdCarburant());
 
             int rowsAffected = stmt.executeUpdate();
@@ -25,10 +26,23 @@ public class VoitureDAO {
             if (rowsAffected > 0) {
                 try (ResultSet rs = stmt.getGeneratedKeys()) {
                     if (rs.next()) {
-                        voiture.setIdVoiture(rs.getInt(1));
+                        int generatedId = rs.getInt(1);
+                        voiture.setIdVoiture(generatedId);
+                        
+                        // Générer le ref basé sur l'ID: VOI0001, VOI0012, etc.
+                        String ref = String.format("VOI%04d", generatedId);
+                        voiture.setRef(ref);
+                        
+                        // Mettre à jour le ref dans la base
+                        String updateSql = "UPDATE Voiture SET ref_ = ? WHERE idVoiture = ?";
+                        try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
+                            updateStmt.setString(1, ref);
+                            updateStmt.setInt(2, generatedId);
+                            updateStmt.executeUpdate();
+                        }
                     }
                 }
-                System.out.println("✅ Voiture créée : " + voiture.getIdVoiture());
+                System.out.println("✅ Voiture créée : " + voiture.getIdVoiture() + " - Ref: " + voiture.getRef());
                 return true;
             }
 
