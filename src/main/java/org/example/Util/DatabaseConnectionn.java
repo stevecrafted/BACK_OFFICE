@@ -29,11 +29,11 @@ public class DatabaseConnectionn {
         // "jdbc:postgresql://db.ibighlolbxphofypqspr.supabase.co:5432/postgres?user=postgres&password=ZxBMqWw1kZ0YPo8L&sslmode=require";
         String url = "jdbc:postgresql://postgres:5432/framework_test";
         String user = "postgres";
-        String password = "steve";
+        String password = "postgres";
 
         // Raha tsy misy url io dbUrl io dia lasa local ho azy ny db
-        String dbUrl = "postgresql://postgres.ibighlolbxphofypqspr:ZxBMqWw1kZ0YPo8L@aws-1-eu-west-1.pooler.supabase.com:6543/postgres";
-        // String dbUrl = "";
+        //String dbUrl = "postgresql://postgres.ibighlolbxphofypqspr:ZxBMqWw1kZ0YPo8L@aws-1-eu-west-1.pooler.supabase.com:6543/postgres";
+        String dbUrl = "";
 
         if (dbUrl != null && !dbUrl.isEmpty()) {
             url = dbUrl;

@@ -17,23 +17,21 @@ public class DatabaseConnection {
     }
 
     public static Connection getConnection() throws SQLException {
-        // ⚠️ IMPORTANT : À externaliser en production
-        // Configuration pour Supavisor (Connection Pooling)
-        String host = "aws-1-eu-west-1.pooler.supabase.com";
-        String port = "6543"; // Port spécifique au pooler
-        String database = "postgres";
-        String user = "postgres.xgkghnstlcghlcctxgiw"; // Format spécifique à Supavisor
-        String password = "nomenjanahary"; // Remplacez par votre mot de passe
+        // Configuration pour base de données LOCALE
+        String host = "localhost";
+        String port = "5432"; // Port PostgreSQL par défaut
+        String database = "framework_test"; // Remplacez par le nom de votre base
+        String user = "postgres"; // Votre utilisateur local
+        String password = "postgres"; // Votre mot de passe local
         
-        // Construction de l'URL avec paramètres SSL
+        // Construction de l'URL
         String url = String.format(
-            "jdbc:postgresql://%s:%s/%s?ssl=true&sslmode=require",
+            "jdbc:postgresql://%s:%s/%s",
             host, port, database
         );
 
         System.out.println("==========================================");
-        System.out.println(" TENTATIVE DE CONNEXION À SUPABASE:");
-        System.out.println("Mode: Connection Pooling (Supavisor)");
+        System.out.println(" TENTATIVE DE CONNEXION À BASE LOCALE:");
         System.out.println("URL: " + url);
         System.out.println("User: " + user);
         System.out.println("Host: " + host);
@@ -41,26 +39,21 @@ public class DatabaseConnection {
         System.out.println("==========================================");
 
         try {
-            // Note: DriverManager.getConnection(String url, String user, String password)
             Connection conn = DriverManager.getConnection(url, user, password);
-            System.out.println("✅ CONNEXION RÉUSSIE À SUPABASE!");
-            
-            // Vérification supplémentaire
-            System.out.println("Mode de connexion: Supavisor (Session Pooling)");
+            System.out.println("✅ CONNEXION RÉUSSIE À LA BASE LOCALE!");
             
             return conn;
         } catch (SQLException e) {
-            System.err.println("❌ ÉCHEC CONNEXION À SUPABASE: " + e.getMessage());
+            System.err.println("❌ ÉCHEC CONNEXION À LA BASE LOCALE: " + e.getMessage());
             System.err.println("Détails de l'erreur:");
             System.err.println("1. Code d'erreur: " + e.getErrorCode());
             System.err.println("2. État SQL: " + e.getSQLState());
             
             System.err.println("\nVérifiez que:");
-            System.err.println("1. Le mot de passe est correct pour l'utilisateur 'postgres.xgkghnstlcghlcctxgiw'");
-            System.err.println("2. Le port 6543 n'est pas bloqué par votre firewall");
-            System.err.println("3. Le projet Supabase est actif (non suspendu)");
-            System.err.println("4. Vous utilisez bien 'aws-1-eu-west-1.pooler.supabase.com' et non l'ancienne URL");
-            System.err.println("5. Le format d'utilisateur 'postgres.votre-ref' est correct");
+            System.err.println("1. PostgreSQL est démarré sur votre machine");
+            System.err.println("2. Le nom de la base de données est correct");
+            System.err.println("3. L'utilisateur et le mot de passe sont corrects");
+            System.err.println("4. Le port 5432 n'est pas bloqué");
             System.err.println();
             throw e;
         }
