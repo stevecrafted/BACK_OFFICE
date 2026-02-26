@@ -4,15 +4,15 @@ public class Voiture {
     private int idVoiture;
     private int capacite;
     private String ref;
-    private int idCarburant;
+    private Carburant carburant; // Objet Carburant au lieu de juste l'ID
 
     // Constructeurs
     public Voiture() {}
 
-    public Voiture(int capacite, String ref, int idCarburant) {
+    public Voiture(int capacite, String ref, Carburant carburant) {
         this.capacite = capacite;
         this.ref = ref;
-        this.idCarburant = idCarburant;
+        this.carburant = carburant;
     }
 
     // Getters et Setters
@@ -25,8 +25,8 @@ public class Voiture {
     public String getRef() { return ref; }
     public void setRef(String ref) { this.ref = ref; }
 
-    public int getIdCarburant() { return idCarburant; }
-    public void setIdCarburant(int idCarburant) { this.idCarburant = idCarburant; }
+    public Carburant getCarburant() { return carburant; }
+    public void setCarburant(Carburant carburant) { this.carburant = carburant; }
 
     @Override
     public String toString() {
@@ -34,7 +34,7 @@ public class Voiture {
                 "idVoiture=" + idVoiture +
                 ", capacite=" + capacite +
                 ", ref='" + ref + '\'' +
-                ", idCarburant=" + idCarburant +
+                ", carburant=" + carburant +
                 '}';
     }
 }

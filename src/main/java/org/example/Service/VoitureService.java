@@ -51,7 +51,8 @@ public class VoitureService {
             voiture.getIdVoiture(),
             voiture.getCapacite(),
             voiture.getRef(),
-            voiture.getIdCarburant()
+            voiture.getCarburant().getIdCarburant(),
+            voiture.getCarburant().getLibelle()
         );
     }
 }

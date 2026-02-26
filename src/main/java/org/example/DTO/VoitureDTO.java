@@ -10,13 +10,6 @@ public class VoitureDTO {
     // Constructeurs
     public VoitureDTO() {}
 
-    public VoitureDTO(int idVoiture, int capacite, String ref, int idCarburant) {
-        this.idVoiture = idVoiture;
-        this.capacite = capacite;
-        this.ref = ref;
-        this.idCarburant = idCarburant;
-    }
-
     public VoitureDTO(int idVoiture, int capacite, String ref, int idCarburant, String libelleCarburant) {
         this.idVoiture = idVoiture;
         this.capacite = capacite;

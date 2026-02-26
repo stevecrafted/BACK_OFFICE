@@ -82,8 +82,20 @@ public class VoitureController {
             @AnnotationRequestParam("capacite") int capacite,
             @AnnotationRequestParam("idCarburant") int idCarburant) {
 
+        // Récupérer l'objet Carburant complet
+        Carburant carburant = carburantDAO.findById(idCarburant);
+        
+        if (carburant == null) {
+            ModelView mv = new ModelView();
+            mv.setView("voitures/form.jsp");
+            mv.addAttribute("error", "Carburant non trouvé");
+            List<Carburant> carburants = carburantDAO.findAll();
+            mv.addAttribute("carburants", carburants);
+            return mv;
+        }
+
         // Le ref sera généré automatiquement basé sur l'ID
-        Voiture voiture = new Voiture(capacite, "", idCarburant);
+        Voiture voiture = new Voiture(capacite, "", carburant);
 
         ModelView mv = new ModelView();
 
@@ -134,7 +146,17 @@ public class VoitureController {
             @AnnotationRequestParam("ref") String ref,
             @AnnotationRequestParam("idCarburant") int idCarburant) {
 
-        Voiture voiture = new Voiture(capacite, ref, idCarburant);
+        // Récupérer l'objet Carburant complet
+        Carburant carburant = carburantDAO.findById(idCarburant);
+        
+        if (carburant == null) {
+            ModelView mv = new ModelView();
+            mv.setView("voitures/form.jsp");
+            mv.addAttribute("error", "Carburant non trouvé");
+            return mv;
+        }
+
+        Voiture voiture = new Voiture(capacite, ref, carburant);
         voiture.setIdVoiture(id);
 
         ModelView mv = new ModelView();

@@ -1,11 +1,12 @@
 package org.example.DAO;
 
 import org.example.Model.Voiture;
+import org.example.Model.Carburant;
 import org.example.Util.DatabaseConnection;
 
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.List;
+import java.uti
 
 public class VoitureDAO {
 
@@ -19,7 +20,7 @@ public class VoitureDAO {
             stmt.setInt(1, voiture.getCapacite());
             // Le ref sera mis à jour après avoir récupéré l'ID
             stmt.setString(2, "TEMP"); // Valeur temporaire
-            stmt.setInt(3, voiture.getIdCarburant());
+            stmt.setInt(3, voiture.getCarburant().getIdCarburant());
 
             int rowsAffected = stmt.executeUpdate();
 
@@ -162,7 +163,7 @@ public class VoitureDAO {
 
             stmt.setInt(1, voiture.getCapacite());
             stmt.setString(2, voiture.getRef());
-            stmt.setInt(3, voiture.getIdCarburant());
+            stmt.setInt(3, voiture.getCarburant().getIdCarburant());
             stmt.setInt(4, voiture.getIdVoiture());
 
             int rowsAffected = stmt.executeUpdate();
@@ -209,7 +210,13 @@ public class VoitureDAO {
         voiture.setIdVoiture(rs.getInt("idVoiture"));
         voiture.setCapacite(rs.getInt("Capacite"));
         voiture.setRef(rs.getString("ref_"));
-        voiture.setIdCarburant(rs.getInt("idCarburant"));
+        
+        // Récupérer l'objet Carburant complet
+        int idCarburant = rs.getInt("idCarburant");
+        CarburantDAO carburantDAO = new CarburantDAO();
+        Carburant carburant = carburantDAO.findById(idCarburant);
+        voiture.setCarburant(carburant);
+        
         return voiture;
     }
 }
