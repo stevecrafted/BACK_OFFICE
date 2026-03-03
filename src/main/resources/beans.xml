@@ -6,9 +6,9 @@
 
     <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
         <property name="driverClassName" value="org.postgresql.Driver"/>
-        <property name="url" value="jdbc:postgresql://localhost:5432/gde"/>
-        <property name="username" value="postgres"/>
-        <property name="password" value="steve"/>
+        <property name="url" value="jdbc:postgresql://aws-1-eu-west-1.pooler.supabase.com:6543/postgres?ssl=true&amp;sslmode=require"/>
+        <property name="username" value="postgres.xgkghnstlcghlcctxgiw"/>
+        <property name="password" value="nomenjanahary"/>
     </bean>
 
 </beans>

@@ -1,0 +1,1 @@
+java -cp target/spring-init-test-1.0.0.jar org.example.token.GenrateToken
