@@ -7,6 +7,7 @@ import org.example.DAO.HotelDAO;
 import org.example.Model.Reservation;
 import org.example.Service.ReservationService;
 import org.example.Model.Hotel;
+import org.example.token.GenrateToken;
 import org.Entity.ModelView;
 
 import java.sql.Date;
@@ -38,10 +39,19 @@ public class ReservationController {
     @Json
     @GetMapping("/api/reservations")
     public List<ReservationDTO> getReservations(
+            @AnnotationRequestParam(value = "token") String token,
             @AnnotationRequestParam(value = "dateStr") String dateStr) {
 
         System.out.println("API /api/reservations appelée avec params:");
-        System.out.println("  dateStr: " + dateStr); 
+        System.out.println("  token: " + token);
+        System.out.println("  dateStr: " + dateStr);
+
+        // Vérification du token
+        if (!GenrateToken.isTokenValide(token)) {
+            System.err.println("❌ Token invalide ou expiré : " + token);
+            return List.of(); // Retourner liste vide si token invalide
+        }
+        System.out.println("✅ Token valide");
 
         // 1. Filtrer par date si spécifié
         if (dateStr != null && !dateStr.isEmpty()) {
