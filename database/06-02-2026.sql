@@ -21,6 +21,5 @@ CREATE TABLE
         FOREIGN KEY (id_hotel) REFERENCES hotel (id)
     );
 
-
 INSERT INTO hotel (nom) VALUES ('Hotel California');
 INSERT INTO hotel (nom) VALUES ('Hotel Transylvania');

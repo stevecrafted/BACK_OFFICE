@@ -232,6 +232,33 @@ public class ReservationDAO {
         reservation.setIdClient(rs.getString("id_client"));
         reservation.setNbPassager(rs.getInt("nbPassager"));
         reservation.setDateHeure(rs.getTimestamp("date_heure"));
+        int idVoiture = rs.getInt("idVoiture");
+        reservation.setIdVoiture(rs.wasNull() ? null : idVoiture);
         return reservation;
+    }
+
+    // ASSIGNER UNE VOITURE A UNE RESERVATION
+    public boolean assignVoiture(int idReservation, int idVoiture) {
+        String sql = "UPDATE reservations SET idVoiture = ? WHERE id = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, idVoiture);
+            stmt.setInt(2, idReservation);
+
+            int rowsAffected = stmt.executeUpdate();
+
+            if (rowsAffected > 0) {
+                System.out.println("✅ Voiture " + idVoiture + " assignée à la réservation " + idReservation);
+                return true;
+            }
+
+        } catch (SQLException e) {
+            System.err.println("❌ Erreur lors de l'assignation de voiture : " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return false;
     }
 }

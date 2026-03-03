@@ -1,5 +1,7 @@
 package org.example.Util;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -25,12 +27,13 @@ public class DatabaseConnection {
             throw new RuntimeException("Driver PostgreSQL requis", e);
         }
 
-        // Charger la configuration depuis beans.xml
+        // Charger la configuration depuis beans.xml (racine du projet)
         try {
-            InputStream is = DatabaseConnection.class.getClassLoader().getResourceAsStream("beans.xml");
-            if (is == null) {
-                throw new RuntimeException("Fichier beans.xml non trouvé dans le classpath");
+            File beansFile = new File("beans.xml");
+            if (!beansFile.exists()) {
+                throw new RuntimeException("Fichier beans.xml non trouvé à la racine du projet");
             }
+            InputStream is = new FileInputStream(beansFile);
 
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             DocumentBuilder builder = factory.newDocumentBuilder();

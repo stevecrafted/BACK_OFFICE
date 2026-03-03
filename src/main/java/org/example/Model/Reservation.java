@@ -8,6 +8,7 @@ public class Reservation {
     private String idClient;
     private int nbPassager;
     private Timestamp dateHeure;
+    private Integer idVoiture; // véhicule assigné par la planification (nullable)
 
     // Constructeurs
     public Reservation() {}
@@ -34,6 +35,9 @@ public class Reservation {
     public Timestamp getDateHeure() { return dateHeure; }
     public void setDateHeure(Timestamp dateHeure) { this.dateHeure = dateHeure; }
 
+    public Integer getIdVoiture() { return idVoiture; }
+    public void setIdVoiture(Integer idVoiture) { this.idVoiture = idVoiture; }
+
     @Override
     public String toString() {
         return "Reservation{" +
@@ -42,6 +46,7 @@ public class Reservation {
                 ", idClient='" + idClient + '\'' +
                 ", nbPassager=" + nbPassager +
                 ", dateHeure=" + dateHeure +
+                ", idVoiture=" + idVoiture +
                 '}';
     }
 }

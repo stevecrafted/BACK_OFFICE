@@ -21,6 +21,7 @@
         .btn-warning { background-color: #ffc107; color: black; }
         .btn-danger { background-color: #dc3545; color: white; }
         .btn-info { background-color: #17a2b8; color: white; }
+        .btn-secondary { background-color: #6c757d; color: white; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
         th { background-color: #007bff; color: white; }
@@ -28,6 +29,20 @@
         .message { padding: 10px; margin-bottom: 20px; border-radius: 3px; }
         .success { background-color: #d4edda; color: #155724; }
         .error { background-color: #f8d7da; color: #721c24; }
+        .filter-section {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border: 1px solid #dee2e6;
+        }
+        .filter-section label { font-weight: bold; margin-right: 10px; }
+        .filter-section input[type="date"] { 
+            padding: 8px 12px; 
+            border: 1px solid #ddd; 
+            border-radius: 3px; 
+            font-size: 14px; 
+        }
     </style>
 </head>
 <body>
@@ -42,6 +57,19 @@
     <% if (error != null) { %>
         <div class="message error"><%= error %></div>
     <% } %>
+
+    <!-- Filtre par date de départ -->
+    <div class="filter-section">
+        <form method="GET" action="/voitures" style="display: inline;">
+            <label for="dateDepart">📅 Filtrer par date de départ :</label>
+            <input type="date" id="dateDepart" name="dateDepart" 
+                   value="<%= request.getAttribute("dateDepart") != null ? request.getAttribute("dateDepart") : "" %>">
+            <button type="submit" class="btn btn-primary">🔍 Filtrer</button>
+        </form>
+        <% if (request.getAttribute("dateDepart") != null) { %>
+            <a href="/voitures" class="btn btn-secondary">✖ Réinitialiser</a>
+        <% } %>
+    </div>
 
     <a href="/voitures/nouveau" class="btn btn-primary">➕ Nouvelle Voiture</a>
     <a href="/api/voitures" class="btn btn-info">📊 API JSON</a>
