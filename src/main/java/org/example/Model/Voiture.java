@@ -4,7 +4,7 @@ public class Voiture {
     private int idVoiture;
     private int capacite;
     private String ref;
-    private Carburant carburant; // Objet Carburant au lieu de juste l'ID
+    private Carburant carburant;
 
     // Constructeurs
     public Voiture() {}
