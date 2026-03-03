@@ -7,6 +7,7 @@
 -- ========================================
 -- 1. SUPPRESSION DE TOUTES LES TABLES
 -- ========================================
+DROP TABLE IF EXISTS assignation CASCADE;
 DROP TABLE IF EXISTS distance CASCADE;
 DROP TABLE IF EXISTS reservations CASCADE;
 DROP TABLE IF EXISTS Voiture CASCADE;
@@ -63,6 +64,17 @@ CREATE TABLE reservations(
     nbPassager INT NOT NULL,
     date_heure TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (id_hotel) REFERENCES hotel(id)
+);
+
+-- Table Assignation (lien entre Voiture et Reservation)
+CREATE TABLE assignation(
+    id SERIAL PRIMARY KEY,
+    id_voiture INT NOT NULL,
+    id_reservation INT NOT NULL,
+    date_assignation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_voiture) REFERENCES Voiture(idVoiture),
+    FOREIGN KEY (id_reservation) REFERENCES reservations(id),
+    UNIQUE(id_reservation) -- Une réservation ne peut être assignée qu'une seule fois
 );
 
 -- Table Parametre
@@ -129,6 +141,7 @@ VALUES (3, 'CLIENT003', 3, '2026-03-20 16:45:00');
 INSERT INTO parametre (nom, valeur) VALUES ('app_version', '1.0.0');
 INSERT INTO parametre (nom, valeur) VALUES ('maintenance_mode', 'false');
 INSERT INTO parametre (nom, valeur) VALUES ('max_reservations_per_day', '100');
+INSERT INTO parametre (nom, valeur) VALUES ('VM', '60'); -- Vitesse Moyenne en km/h
 
 -- ========================================
 -- 4. VÉRIFICATION
@@ -138,6 +151,7 @@ SELECT 'Voitures: ' || COUNT(*) FROM Voiture;
 SELECT 'Hotels: ' || COUNT(*) FROM hotel;
 SELECT 'Distances: ' || COUNT(*) FROM distance;
 SELECT 'Réservations: ' || COUNT(*) FROM reservations;
+SELECT 'Assignations: ' || COUNT(*) FROM assignation;
 SELECT 'Paramètres: ' || COUNT(*) FROM parametre;
 
 -- ========================================
