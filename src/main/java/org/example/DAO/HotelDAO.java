@@ -11,13 +11,12 @@ public class HotelDAO {
 
     // CREATE
     public boolean create(Hotel hotel) {
-        String sql = "INSERT INTO hotel (code, libelle) VALUES (?, ?)";
+        String sql = "INSERT INTO hotel (nom) VALUES (?)";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             
-            stmt.setString(1, hotel.getCode());
-            stmt.setString(2, hotel.getLibelle());
+            stmt.setString(1, hotel.getNom());
             
             int rowsAffected = stmt.executeUpdate();
             
@@ -27,7 +26,7 @@ public class HotelDAO {
                         hotel.setId(rs.getInt(1));
                     }
                 }
-                System.out.println("✅ Hotel créé : " + hotel.getCode() + " - " + hotel.getLibelle());
+                System.out.println("✅ Hotel créé : " + hotel.getNom());
                 return true;
             }
             
@@ -74,7 +73,7 @@ public class HotelDAO {
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     Hotel hotel = mapResultSetToHotel(rs);
-                    System.out.println("✅ Hotel trouvé : " + hotel.getCode());
+                    System.out.println("✅ Hotel trouvé : " + hotel.getNom());
                     return hotel;
                 }
             }
@@ -89,19 +88,18 @@ public class HotelDAO {
 
     // UPDATE
     public boolean update(Hotel hotel) {
-        String sql = "UPDATE hotel SET code = ?, libelle = ? WHERE id = ?";
+        String sql = "UPDATE hotel SET nom = ? WHERE id = ?";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             
-            stmt.setString(1, hotel.getCode());
-            stmt.setString(2, hotel.getLibelle());
-            stmt.setInt(3, hotel.getId());
+            stmt.setString(1, hotel.getNom());
+            stmt.setInt(2, hotel.getId());
             
             int rowsAffected = stmt.executeUpdate();
             
             if (rowsAffected > 0) {
-                System.out.println("✅ Hotel mis à jour : " + hotel.getCode());
+                System.out.println("✅ Hotel mis à jour : " + hotel.getNom());
                 return true;
             }
             
@@ -140,8 +138,7 @@ public class HotelDAO {
     private Hotel mapResultSetToHotel(ResultSet rs) throws SQLException {
         Hotel hotel = new Hotel();
         hotel.setId(rs.getInt("id"));
-        hotel.setCode(rs.getString("code"));
-        hotel.setLibelle(rs.getString("libelle"));
+        hotel.setNom(rs.getString("nom"));
         return hotel;
     }
 }

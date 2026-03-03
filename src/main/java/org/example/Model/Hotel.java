@@ -2,33 +2,27 @@ package org.example.Model;
 
 public class Hotel {
     private int id;
-    private String code;
-    private String libelle;
+    private String nom;
 
     // Constructeurs
     public Hotel() {}
 
-    public Hotel(String code, String libelle) {
-        this.code = code;
-        this.libelle = libelle;
+    public Hotel(String nom) {
+        this.nom = nom;
     }
 
     // Getters et Setters
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
 
-    public String getCode() { return code; }
-    public void setCode(String code) { this.code = code; }
-
-    public String getLibelle() { return libelle; }
-    public void setLibelle(String libelle) { this.libelle = libelle; }
+    public String getNom() { return nom; }
+    public void setNom(String nom) { this.nom = nom; }
 
     @Override
     public String toString() {
         return "Hotel{" +
                 "id=" + id +
-                ", code='" + code + '\'' +
-                ", libelle='" + libelle + '\'' +
+                ", nom='" + nom + '\'' +
                 '}';
     }
 }

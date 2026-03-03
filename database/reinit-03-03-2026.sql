@@ -39,8 +39,7 @@ CREATE TABLE Voiture(
 -- Table Hotel
 CREATE TABLE hotel(
     id SERIAL,
-    code VARCHAR(50) NOT NULL,
-    libelle VARCHAR(100) NOT NULL,
+    nom VARCHAR(250) NOT NULL,
     PRIMARY KEY(id)
 );
 
@@ -98,23 +97,23 @@ INSERT INTO Voiture (Capacite, ref_, idCarburant) VALUES (4, 'VOI0003', 1);
 INSERT INTO Voiture (Capacite, ref_, idCarburant) VALUES (5, 'VOI0004', 3);
 
 -- Hotels
-INSERT INTO hotel (code, libelle) VALUES ('TNR', 'Ivato Aeroport');
-INSERT INTO hotel (code, libelle) VALUES ('MJN', 'Mahajanga Centre');
-INSERT INTO hotel (code, libelle) VALUES ('TLE', 'Toliara Beach');
-INSERT INTO hotel (code, libelle) VALUES ('FTU', 'Fort Dauphin');
-INSERT INTO hotel (code, libelle) VALUES ('TMM', 'Tamatave Port');
+INSERT INTO hotel (nom) VALUES ('Colbert');
+INSERT INTO hotel (nom) VALUES ('Novotel');
+INSERT INTO hotel (nom) VALUES ('Ibis');
+INSERT INTO hotel (nom) VALUES ('Lokanga');
+INSERT INTO hotel (nom) VALUES ('test');
 
 -- Distances entre hotels
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 2, 550.00);  -- TNR <-> MJN
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 3, 900.00);  -- TNR <-> TLE
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 4, 850.00);  -- TNR <-> FTU
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 5, 350.00);  -- TNR <-> TMM
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (2, 3, 650.00);  -- MJN <-> TLE
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (2, 4, 1200.00); -- MJN <-> FTU
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (2, 5, 800.00);  -- MJN <-> TMM
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (3, 4, 450.00);  -- TLE <-> FTU
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (3, 5, 1100.00); -- TLE <-> TMM
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (4, 5, 950.00);  -- FTU <-> TMM
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 2, 5.00);  -- TNR <-> MJN
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 3, 9.00);  -- TNR <-> TLE
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 4, 8.00);  -- TNR <-> FTU
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 5, 3.00);  -- TNR <-> TMM
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (2, 3, 6.00);  -- MJN <-> TLE
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (2, 4, 12.00); -- MJN <-> FTU
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (2, 5, 8.00);  -- MJN <-> TMM
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (3, 4, 4.00);  -- TLE <-> FTU
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (3, 5, 11.00); -- TLE <-> TMM
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (4, 5, 9.00);  -- FTU <-> TMM
 
 -- Réservations de test
 INSERT INTO reservations (id_hotel, id_client, nbPassager, date_heure) 
