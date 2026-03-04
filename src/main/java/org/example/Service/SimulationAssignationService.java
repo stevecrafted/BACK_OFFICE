@@ -130,12 +130,14 @@ public class SimulationAssignationService {
             }
         }
 
-        // 2. Chercher une nouvelle voiture
+        // 2. Chercher une nouvelle voiture (exclure celles déjà utilisées dans cette vague)
         List<Voiture> voituresCompatibles = voituresDisponibles.stream()
                 .filter(v -> v.getCapacite() >= nbPassagers)
+                .filter(v -> !assignationsVague.containsKey(v.getIdVoiture())) // Exclure voitures déjà assignées dans cette vague
                 .collect(Collectors.toList());
 
         if (voituresCompatibles.isEmpty()) {
+            System.out.println("   → Aucune voiture compatible disponible");
             return null;
         }
 
@@ -162,12 +164,12 @@ public class SimulationAssignationService {
 
         Voiture voitureChoisie;
         if (!voituresDiesel.isEmpty()) {
-            System.out.println("   → Priorité Diesel appliquée");
+            System.out.println("   → Écart minimal: " + ecartMin + " | Priorité Diesel");
             voitureChoisie = voituresDiesel.size() == 1 ? 
                             voituresDiesel.get(0) : 
                             voituresDiesel.get(new Random().nextInt(voituresDiesel.size()));
         } else {
-            System.out.println("   → Choix parmi " + voituresOptimales.size() + " voiture(s) optimale(s)");
+            System.out.println("   → Écart minimal: " + ecartMin + " | Choix parmi " + voituresOptimales.size() + " voiture(s)");
             voitureChoisie = voituresOptimales.size() == 1 ? 
                             voituresOptimales.get(0) : 
                             voituresOptimales.get(new Random().nextInt(voituresOptimales.size()));
