@@ -1,0 +1,13 @@
+TL: Zo
+FRONT-OFFICE 
+    Liste Reservation (Salohy)
+    Tableau avec champs : (idCClient , nbrPassager , date Heure Arrivée , Hotel )[]
+    Filtre :(Date debut , Date fin) []
+
+BACK-OFFICE
+    Formulaire d'insertion de reservation (Steve)
+    Champs : (idCClient , nbrPassager , date Heure Arrivée , Hotel (liste deroulante) )[]     
+    
+    
+    
+
