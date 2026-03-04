@@ -4,9 +4,38 @@
 -- ========================================
 -- Ce script ajoute des réservations de test pour tester la simulation par vagues
 
--- Supprimer les anciennes réservations de test
+-- Supprimer les anciennes données de test
 DELETE FROM assignation;
 DELETE FROM reservations;
+DELETE FROM Voiture;
+DELETE FROM Carburant;
+DELETE FROM hotel;
+
+-- ========================================
+-- RECRÉER LES DONNÉES DE BASE
+-- ========================================
+
+-- Carburants
+INSERT INTO Carburant (libelle) VALUES ('Essence');
+INSERT INTO Carburant (libelle) VALUES ('Diesel');
+INSERT INTO Carburant (libelle) VALUES ('Électrique');
+INSERT INTO Carburant (libelle) VALUES ('Hybride');
+
+-- Voitures (AUGMENTÉ pour supporter plus de réservations)
+INSERT INTO Voiture (Capacite, ref_, idCarburant) VALUES (5, 'VOI0001', 1);  -- Essence, 5 places
+INSERT INTO Voiture (Capacite, ref_, idCarburant) VALUES (7, 'VOI0002', 2);  -- Diesel, 7 places
+INSERT INTO Voiture (Capacite, ref_, idCarburant) VALUES (4, 'VOI0003', 1);  -- Essence, 4 places
+INSERT INTO Voiture (Capacite, ref_, idCarburant) VALUES (5, 'VOI0004', 3);  -- Électrique, 5 places
+INSERT INTO Voiture (Capacite, ref_, idCarburant) VALUES (7, 'VOI0005', 2);  -- Diesel, 7 places
+INSERT INTO Voiture (Capacite, ref_, idCarburant) VALUES (4, 'VOI0006', 1);  -- Essence, 4 places
+INSERT INTO Voiture (Capacite, ref_, idCarburant) VALUES (5, 'VOI0007', 2);  -- Diesel, 5 places
+INSERT INTO Voiture (Capacite, ref_, idCarburant) VALUES (6, 'VOI0008', 2);  -- Diesel, 6 places
+
+-- Hotels
+INSERT INTO hotel (nom) VALUES ('Colbert');
+INSERT INTO hotel (nom) VALUES ('Novotel');
+INSERT INTO hotel (nom) VALUES ('Ibis');
+INSERT INTO hotel (nom) VALUES ('Lokanga');
 
 -- ========================================
 -- SCÉNARIO DE TEST: 2026-03-10
@@ -62,6 +91,15 @@ VALUES (3, 'Leo', 4, '2026-03-15 11:00:00');     -- 4 passagers
 -- ========================================
 -- VÉRIFICATION
 -- ========================================
+SELECT '=== VOITURES DISPONIBLES ===' as info;
+SELECT idVoiture, Capacite, ref_, idCarburant FROM Voiture ORDER BY idVoiture;
+
+SELECT '=== CAPACITÉ TOTALE ===' as info;
+SELECT 
+    COUNT(*) as nb_voitures,
+    SUM(Capacite) as capacite_totale
+FROM Voiture;
+
 SELECT '=== RÉSERVATIONS PAR DATE ===' as info;
 
 SELECT 
@@ -73,7 +111,7 @@ FROM reservations
 GROUP BY DATE(date_heure), date_heure
 ORDER BY date_heure;
 
-SELECT '=== DÉTAIL DES RÉSERVATIONS ===' as info;
+SELECT '=== DÉTAIL DES RÉSERVATIONS 2026-03-10 ===' as info;
 
 SELECT 
     id,
@@ -82,7 +120,20 @@ SELECT
     nbPassager,
     date_heure
 FROM reservations
+WHERE DATE(date_heure) = '2026-03-10'
 ORDER BY date_heure, nbPassager DESC;
+
+SELECT '=== ANALYSE PAR VAGUE (2026-03-10) ===' as info;
+
+SELECT 
+    date_heure as vague,
+    COUNT(*) as nb_reservations,
+    SUM(nbPassager) as total_passagers,
+    STRING_AGG(id_client || '(' || nbPassager || 'p)', ', ' ORDER BY nbPassager DESC) as clients
+FROM reservations
+WHERE DATE(date_heure) = '2026-03-10'
+GROUP BY date_heure
+ORDER BY date_heure;
 
 -- ========================================
 -- INSTRUCTIONS

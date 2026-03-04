@@ -63,23 +63,70 @@ URL: http://localhost:8084/assignations/simuler
 
 ## Données de Test
 
-### Charger les données de test:
-```sql
--- Exécuter le script
+### Option 1: Script Complet (Recommandé)
+Recrée toutes les données (voitures, hotels, réservations) :
+```bash
 psql -U postgres -d framework_test -f database/test-simulation-data.sql
 ```
 
+### Option 2: Scénarios Complets
+Crée 5 scénarios de test différents :
+```bash
+psql -U postgres -d framework_test -f database/test-scenarios-complets.sql
+```
+
+### Option 3: Ajouter des Réservations
+Ajoute des réservations aux données existantes (sans supprimer) :
+```bash
+psql -U postgres -d framework_test -f database/add-more-reservations.sql
+```
+
+### Voitures Disponibles (après test-simulation-data.sql)
+- VOI0001: 5 places, Essence
+- VOI0002: 7 places, Diesel
+- VOI0003: 4 places, Essence
+- VOI0004: 5 places, Électrique
+- VOI0005: 7 places, Diesel
+- VOI0006: 4 places, Essence
+- VOI0007: 5 places, Diesel
+- VOI0008: 6 places, Diesel
+
+**Capacité totale: 43 places**
+
 ### Scénarios disponibles:
 
-#### Scénario 1: 2026-03-10
+#### Scénario 1: 2026-03-10 (Multi-Vagues)
 - 3 vagues (08:00, 10:30, 14:00)
 - 9 réservations au total
+- 33 passagers total
 - Test du traitement multi-vagues
+- **Vague 1 (08:00)**: Alice(5p), Bob(3p), Charlie(2p) = 10 passagers
+- **Vague 2 (10:30)**: David(7p), Emma(4p), Frank(3p), Grace(2p) = 16 passagers
+- **Vague 3 (14:00)**: Henry(4p), Iris(3p) = 7 passagers
 
-#### Scénario 2: 2026-03-15
+#### Scénario 2: 2026-03-15 (Remplissage Optimal)
 - 2 vagues (09:00, 11:00)
 - 3 réservations
 - Test du remplissage optimal (2 réservations dans 1 voiture)
+- **Vague 1 (09:00)**: Jack(3p) + Kate(2p) = 5 passagers → 1 voiture de 5 places
+- **Vague 2 (11:00)**: Leo(4p)
+
+#### Scénario 3: 2026-03-20 (Capacité Insuffisante)
+- 2 vagues (16:00, 18:00)
+- 10 réservations
+- Test avec capacité insuffisante (certaines réservations non assignées)
+- **Vague 1 (16:00)**: 8 réservations, 37 passagers
+- **Vague 2 (18:00)**: 2 réservations, 4 passagers (probablement non assignées)
+
+#### Scénario 4: 2026-03-25 (Priorité Diesel)
+- 1 vague (10:00)
+- 1 réservation de 4 passagers
+- Vérifie que le Diesel est prioritaire
+
+#### Scénario 5: 2026-03-30 (Écart Minimal)
+- 1 vague (14:00)
+- 1 réservation de 3 passagers
+- Vérifie la minimisation de l'écart (voiture 4 places plutôt que 5)
 
 ## API REST
 
