@@ -9,8 +9,7 @@ import java.util.List;
 
 public class ReservationDAO {
 
-    // Dans ReservationDAO.java - Modifier la méthode CREATE
-
+    // CREATE
     public boolean create(Reservation reservation) {
         String sql = "INSERT INTO reservations (id_hotel, id_client, nbPassager, date_heure) VALUES (?, ?, ?, ?)";
 
@@ -21,7 +20,6 @@ public class ReservationDAO {
             stmt.setString(2, reservation.getIdClient());
             stmt.setInt(3, reservation.getNbPassager());
 
-            // Si dateHeure est null, utiliser la date actuelle
             if (reservation.getDateHeure() != null) {
                 stmt.setTimestamp(4, reservation.getDateHeure());
             } else {
@@ -57,11 +55,8 @@ public class ReservationDAO {
                 ResultSet rs = stmt.executeQuery(sql)) {
 
             while (rs.next()) {
-                Reservation reservation = mapResultSetToReservation(rs);
-                reservations.add(reservation);
+                reservations.add(mapResultSetToReservation(rs));
             }
-
-            System.out.println("✅ " + reservations.size() + " réservation(s) trouvée(s)");
 
         } catch (SQLException e) {
             System.err.println("❌ Erreur lors de la lecture : " + e.getMessage());
@@ -82,9 +77,7 @@ public class ReservationDAO {
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    Reservation reservation = mapResultSetToReservation(rs);
-                    System.out.println("✅ Réservation trouvée : " + reservation.getId());
-                    return reservation;
+                    return mapResultSetToReservation(rs);
                 }
             }
 
@@ -94,6 +87,57 @@ public class ReservationDAO {
         }
 
         return null;
+    }
+
+    // UPDATE
+    public boolean update(Reservation reservation) {
+        String sql = "UPDATE reservations SET id_hotel = ?, id_client = ?, nbPassager = ?, date_heure = ? WHERE id = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, reservation.getIdHotel());
+            stmt.setString(2, reservation.getIdClient());
+            stmt.setInt(3, reservation.getNbPassager());
+            stmt.setTimestamp(4, reservation.getDateHeure());
+            stmt.setInt(5, reservation.getId());
+
+            int rowsAffected = stmt.executeUpdate();
+
+            if (rowsAffected > 0) {
+                System.out.println("✅ Réservation mise à jour : " + reservation.getId());
+                return true;
+            }
+
+        } catch (SQLException e) {
+            System.err.println("❌ Erreur lors de la mise à jour : " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    // DELETE
+    public boolean delete(int id) {
+        String sql = "DELETE FROM reservations WHERE id = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, id);
+            int rowsAffected = stmt.executeUpdate();
+
+            if (rowsAffected > 0) {
+                System.out.println("✅ Réservation supprimée (ID: " + id + ")");
+                return true;
+            }
+
+        } catch (SQLException e) {
+            System.err.println("❌ Erreur lors de la suppression : " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return false;
     }
 
     // READ BY CLIENT
@@ -148,56 +192,6 @@ public class ReservationDAO {
         return reservations;
     }
 
-    // UPDATE
-    public boolean update(Reservation reservation) {
-        String sql = "UPDATE reservations SET id_hotel = ?, id_client = ?, nbPassager = ? WHERE id = ?";
-
-        try (Connection conn = DatabaseConnection.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, reservation.getIdHotel());
-            stmt.setString(2, reservation.getIdClient());
-            stmt.setInt(3, reservation.getNbPassager());
-            stmt.setInt(4, reservation.getId());
-
-            int rowsAffected = stmt.executeUpdate();
-
-            if (rowsAffected > 0) {
-                System.out.println("✅ Réservation mise à jour : " + reservation.getId());
-                return true;
-            }
-
-        } catch (SQLException e) {
-            System.err.println("❌ Erreur lors de la mise à jour : " + e.getMessage());
-            e.printStackTrace();
-        }
-
-        return false;
-    }
-
-    // DELETE
-    public boolean delete(int id) {
-        String sql = "DELETE FROM reservations WHERE id = ?";
-
-        try (Connection conn = DatabaseConnection.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, id);
-            int rowsAffected = stmt.executeUpdate();
-
-            if (rowsAffected > 0) {
-                System.out.println("✅ Réservation supprimée (ID: " + id + ")");
-                return true;
-            }
-
-        } catch (SQLException e) {
-            System.err.println("❌ Erreur lors de la suppression : " + e.getMessage());
-            e.printStackTrace();
-        }
-
-        return false;
-    }
-
     // READ BY DATE
     public List<Reservation> findByDate(java.sql.Date date) {
         List<Reservation> reservations = new ArrayList<>();
@@ -224,7 +218,7 @@ public class ReservationDAO {
         return reservations;
     }
 
-    // MÉTHODE UTILITAIRE : Mapper ResultSet vers Reservation
+    // MÉTHODE UTILITAIRE
     private Reservation mapResultSetToReservation(ResultSet rs) throws SQLException {
         Reservation reservation = new Reservation();
         reservation.setId(rs.getInt("id"));

@@ -17,6 +17,9 @@ public class ReservationService {
         this.reservationDAO = new ReservationDAO();
     } 
     
+    /**
+     * Récupère les réservations par date
+     */
     public List<ReservationDTO> getListReservationByDate(Date date) {
         if (date == null) {
             System.err.println("La date ne peut pas être null");

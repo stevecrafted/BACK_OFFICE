@@ -1,145 +1,139 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ page import="java.util.List" %>
-<%@ page import="org.example.Model.Reservation" %>
 <%@ page import="org.example.Model.Hotel" %>
-<%@ page import="java.text.SimpleDateFormat" %>
 <!DOCTYPE html>
 <html>
 <head>
-    <title><%= "create".equals(request.getAttribute("action")) ? "Nouvelle Réservation" : "Modifier Réservation" %></title>
+    <meta charset="UTF-8">
+    <title>Nouvelle Réservation</title>
     <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            margin: 20px; 
-            max-width: 600px; 
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
         }
-        .form-group { 
-            margin-bottom: 15px; 
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        label { 
-            display: block; 
-            margin-bottom: 5px; 
-            font-weight: bold; 
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #2196F3;
+            padding-bottom: 10px;
         }
-        input[type="text"],
-        input[type="number"],
-        input[type="datetime-local"],
-        select {
-            width: 100%; 
-            padding: 8px; 
-            border: 1px solid #ddd; 
-            border-radius: 3px; 
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
             box-sizing: border-box;
+            font-size: 14px;
         }
-        .btn { 
-            padding: 10px 20px; 
-            border: none; 
-            border-radius: 3px; 
-            cursor: pointer; 
+        input:focus, select:focus {
+            outline: none;
+            border-color: #2196F3;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        .btn-primary {
+            background-color: #2196F3;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #0b7dda;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
             text-decoration: none;
             display: inline-block;
         }
-        .btn-success { 
-            background-color: #28a745; 
-            color: white; 
+        .btn-secondary:hover {
+            background-color: #5a6268;
         }
-        .btn-secondary { 
-            background-color: #6c757d; 
-            color: white; 
+        .message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
         }
-        .message { 
-            padding: 10px; 
-            margin-bottom: 20px; 
-            border-radius: 3px; 
-        }
-        .error { 
-            background-color: #f8d7da; 
-            color: #721c24; 
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
         }
     </style>
 </head>
 <body>
-    <h1><%= "create".equals(request.getAttribute("action")) ? "Nouvelle Réservation" : "Modifier Réservation" %></h1>
+    <div class="container">
+        <h1>📋 Nouvelle Réservation</h1>
 
-    <% String error = (String) request.getAttribute("error"); %>
-    <% if (error != null) { %>
-        <div class="message error"><%= error %></div>
-    <% } %>
-
-    <% 
-        String action = (String) request.getAttribute("action");
-        Reservation reservation = (Reservation) request.getAttribute("reservation");
-        List<Hotel> hotels = (List<Hotel>) request.getAttribute("hotels");
-        
-        String formAction = "create".equals(action) ? "/reservations/create" : "/reservations/update";
-        
-        // Formater la date pour l'input datetime-local
-        String dateHeureValue = "";
-        if (reservation != null && reservation.getDateHeure() != null) {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm");
-            dateHeureValue = sdf.format(reservation.getDateHeure());
-        }
-    %>
-
-    <form method="POST" action="<%= formAction %>">
-        
-        <% if ("update".equals(action) && reservation != null) { %>
-            <input type="hidden" name="id" value="<%= reservation.getId() %>">
+        <% if (request.getAttribute("error") != null) { %>
+            <div class="message error">
+                <%= request.getAttribute("error") %>
+            </div>
         <% } %>
 
-        <div class="form-group">
-            <label for="idHotel">Hotel *</label>
-            <select id="idHotel" name="idHotel" required>
-                <option value="">-- Sélectionnez un hotel --</option>
-                <% 
-                    if (hotels != null) {
-                        for (Hotel h : hotels) {
-                            boolean selected = reservation != null && reservation.getIdHotel() == h.getId();
-                %>
-                    <option value="<%= h.getId() %>" <%= selected ? "selected" : "" %>>
-                        <%= h.getNom() %>
-                    </option>
-                <% 
+        <form action="/reservations/create" method="post">
+            <div class="form-group">
+                <label for="idClient">Client *</label>
+                <input type="text" id="idClient" name="idClient" required 
+                       placeholder="Ex: CLIENT001">
+            </div>
+
+            <div class="form-group">
+                <label for="nbPassager">Nombre de Passagers *</label>
+                <input type="number" id="nbPassager" name="nbPassager" required 
+                       min="1" max="50" placeholder="Ex: 4">
+            </div>
+
+            <div class="form-group">
+                <label for="idHotel">Hotel *</label>
+                <select id="idHotel" name="idHotel" required>
+                    <option value="">-- Sélectionner un hotel --</option>
+                    <%
+                        List<Hotel> hotels = (List<Hotel>) request.getAttribute("hotels");
+                        if (hotels != null) {
+                            for (Hotel hotel : hotels) {
+                    %>
+                        <option value="<%= hotel.getId() %>">
+                            <%= hotel.getNom() %> (ID: <%= hotel.getId() %>)
+                        </option>
+                    <%
+                            }
                         }
-                    }
-                %>
-            </select>
-        </div>
+                    %>
+                </select>
+            </div>
 
-        <div class="form-group">
-            <label for="idClient">ID Client *</label>
-            <input type="text" 
-                   id="idClient" 
-                   name="idClient" 
-                   value="<%= reservation != null ? reservation.getIdClient() : "" %>" 
-                   required>
-        </div>
+            <div class="form-group">
+                <label for="dateHeure">Date et Heure *</label>
+                <input type="datetime-local" id="dateHeure" name="dateHeure" required>
+            </div>
 
-        <div class="form-group">
-            <label for="nbPassager">Nombre de Passagers *</label>
-            <input type="number" 
-                   id="nbPassager" 
-                   name="nbPassager" 
-                   min="1"
-                   value="<%= reservation != null ? reservation.getNbPassager() : "" %>" 
-                   required>
-        </div>
-
-        <div class="form-group">
-            <label for="dateHeure">Date et Heure de Réservation *</label>
-            <input type="datetime-local" 
-                   id="dateHeure" 
-                   name="dateHeure" 
-                   value="<%= dateHeureValue %>" 
-                   required>
-        </div>
-
-        <div class="form-group">
-            <button type="submit" class="btn btn-success">
-                <%= "create".equals(action) ? "➕ Créer" : "💾 Mettre à jour" %>
-            </button>
-            <a href="/reservations" class="btn btn-secondary">❌ Annuler</a>
-        </div>
-    </form>
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary">✓ Créer la Réservation</button>
+                <a href="/reservations" class="btn btn-secondary">Annuler</a>
+            </div>
+        </form>
+    </div>
 </body>
 </html>
