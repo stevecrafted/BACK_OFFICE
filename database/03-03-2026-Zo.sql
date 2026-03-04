@@ -35,13 +35,13 @@ CREATE TABLE distance(
 
 -- Insérer des distances entre les hotels
 -- TNR (1) <-> MJN (2): 550 km
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 2, 550.00);
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 2, 5);
 
 -- TNR (1) <-> TLE (3): 900 km
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 3, 900.00);
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 3, 9);
 
 -- MJN (2) <-> TLE (3): 650 km
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (2, 3, 650.00);
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (2, 3, 3);
 
 -- Note: Pas besoin d'insérer (2,1), (3,1), (3,2) car la distance est la même dans les deux sens
 -- Pour récupérer la distance entre deux hotels A et B, utilisez:

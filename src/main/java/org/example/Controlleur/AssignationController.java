@@ -7,9 +7,13 @@ import org.example.DAO.VoitureDAO;
 import org.example.Model.Assignation;
 import org.example.Model.Reservation;
 import org.example.Model.Voiture;
+import org.example.Model.ResultatSimulation;
+import org.example.Model.SimulationAssignation;
 import org.example.Service.AssignationService;
+import org.example.Service.SimulationAssignationService;
 import org.Entity.ModelView;
 
+import java.sql.Date;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -19,6 +23,7 @@ import java.util.Map;
 public class AssignationController {
 
     private AssignationService assignationService = new AssignationService();
+    private SimulationAssignationService simulationService = new SimulationAssignationService();
     private AssignationDAO assignationDAO = new AssignationDAO();
     private VoitureDAO voitureDAO = new VoitureDAO();
     private ReservationDAO reservationDAO = new ReservationDAO();
@@ -120,6 +125,97 @@ public class AssignationController {
         } else {
             mv.setView("redirect:/assignations");
             mv.addAttribute("error", "Erreur lors de la suppression");
+        }
+
+        return mv;
+    }
+
+    /**
+     * Afficher le formulaire de simulation
+     */
+    @GetMapping("/assignations/simuler")
+    public ModelView afficherFormulaireSimulation() {
+        ModelView mv = new ModelView();
+        mv.setView("assignations/simulation.jsp");
+        return mv;
+    }
+
+    /**
+     * Lancer la simulation pour une date donnée
+     */
+    @PostMapping("/assignations/simuler")
+    public ModelView lancerSimulation(@AnnotationRequestParam("date") String dateStr) {
+        ModelView mv = new ModelView();
+        mv.setView("assignations/simulation.jsp");
+
+        try {
+            Date dateSimulation = Date.valueOf(dateStr);
+            ResultatSimulation resultat = simulationService.simulerAssignation(dateSimulation);
+            
+            mv.addAttribute("resultat", resultat);
+            mv.addAttribute("dateSimulation", dateStr);
+            
+        } catch (IllegalArgumentException e) {
+            mv.addAttribute("error", "Format de date invalide. Utilisez YYYY-MM-DD");
+        } catch (Exception e) {
+            mv.addAttribute("error", "Erreur lors de la simulation : " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return mv;
+    }
+
+    /**
+     * API JSON - Lancer la simulation
+     */
+    @Json
+    @GetMapping("/api/assignations/simuler")
+    public ResultatSimulation lancerSimulationAPI(@AnnotationRequestParam("date") String dateStr) {
+        try {
+            Date dateSimulation = Date.valueOf(dateStr);
+            return simulationService.simulerAssignation(dateSimulation);
+        } catch (Exception e) {
+            System.err.println("❌ Erreur API simulation : " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    /**
+     * Confirmer et enregistrer la simulation en base de données
+     */
+    @PostMapping("/assignations/confirmer")
+    public ModelView confirmerSimulation(@AnnotationRequestParam("date") String dateStr) {
+        ModelView mv = new ModelView();
+
+        try {
+            Date dateSimulation = Date.valueOf(dateStr);
+            ResultatSimulation resultat = simulationService.simulerAssignation(dateSimulation);
+            
+            int nbAssignations = 0;
+            
+            // Enregistrer chaque assignation en base
+            for (SimulationAssignation simAssignation : resultat.getAssignations()) {
+                for (Reservation reservation : simAssignation.getReservations()) {
+                    Assignation assignation = new Assignation();
+                    assignation.setIdReservation(reservation.getId());
+                    assignation.setIdVoiture(simAssignation.getVoiture().getIdVoiture());
+                    
+                    if (assignationDAO.create(assignation)) {
+                        // Mettre à jour la réservation avec l'ID de la voiture
+                        reservationDAO.assignVoiture(reservation.getId(), simAssignation.getVoiture().getIdVoiture());
+                        nbAssignations++;
+                    }
+                }
+            }
+            
+            mv.setView("redirect:/assignations");
+            mv.addAttribute("message", nbAssignations + " assignation(s) confirmée(s) et enregistrée(s)");
+            
+        } catch (Exception e) {
+            mv.setView("redirect:/assignations/simuler");
+            mv.addAttribute("error", "Erreur lors de la confirmation : " + e.getMessage());
+            e.printStackTrace();
         }
 
         return mv;

@@ -226,8 +226,8 @@ public class ReservationDAO {
         reservation.setIdClient(rs.getString("id_client"));
         reservation.setNbPassager(rs.getInt("nbPassager"));
         reservation.setDateHeure(rs.getTimestamp("date_heure"));
-        int idVoiture = rs.getInt("idVoiture");
-        reservation.setIdVoiture(rs.wasNull() ? null : idVoiture);
+        
+        
         return reservation;
     }
 
