@@ -9,8 +9,7 @@ import java.util.List;
 
 public class ReservationDAO {
 
-    // Dans ReservationDAO.java - Modifier la méthode CREATE
-
+    // CREATE
     public boolean create(Reservation reservation) {
         String sql = "INSERT INTO reservations (id_hotel, id_client, nbPassager, date_heure) VALUES (?, ?, ?, ?)";
 
@@ -21,7 +20,6 @@ public class ReservationDAO {
             stmt.setString(2, reservation.getIdClient());
             stmt.setInt(3, reservation.getNbPassager());
 
-            // Si dateHeure est null, utiliser la date actuelle
             if (reservation.getDateHeure() != null) {
                 stmt.setTimestamp(4, reservation.getDateHeure());
             } else {
@@ -57,11 +55,8 @@ public class ReservationDAO {
                 ResultSet rs = stmt.executeQuery(sql)) {
 
             while (rs.next()) {
-                Reservation reservation = mapResultSetToReservation(rs);
-                reservations.add(reservation);
+                reservations.add(mapResultSetToReservation(rs));
             }
-
-            System.out.println("✅ " + reservations.size() + " réservation(s) trouvée(s)");
 
         } catch (SQLException e) {
             System.err.println("❌ Erreur lors de la lecture : " + e.getMessage());
@@ -82,9 +77,7 @@ public class ReservationDAO {
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    Reservation reservation = mapResultSetToReservation(rs);
-                    System.out.println("✅ Réservation trouvée : " + reservation.getId());
-                    return reservation;
+                    return mapResultSetToReservation(rs);
                 }
             }
 
@@ -96,61 +89,9 @@ public class ReservationDAO {
         return null;
     }
 
-    // READ BY CLIENT
-    public List<Reservation> findByClient(String idClient) {
-        List<Reservation> reservations = new ArrayList<>();
-        String sql = "SELECT * FROM reservations WHERE id_client = ? ORDER BY date_heure DESC";
-
-        try (Connection conn = DatabaseConnection.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setString(1, idClient);
-
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    reservations.add(mapResultSetToReservation(rs));
-                }
-            }
-
-            System.out.println("✅ " + reservations.size() + " réservation(s) trouvée(s) pour le client : " + idClient);
-
-        } catch (SQLException e) {
-            System.err.println("❌ Erreur lors de la recherche par client : " + e.getMessage());
-            e.printStackTrace();
-        }
-
-        return reservations;
-    }
-
-    // READ BY HOTEL
-    public List<Reservation> findByHotel(int idHotel) {
-        List<Reservation> reservations = new ArrayList<>();
-        String sql = "SELECT * FROM reservations WHERE id_hotel = ? ORDER BY date_heure DESC";
-
-        try (Connection conn = DatabaseConnection.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, idHotel);
-
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    reservations.add(mapResultSetToReservation(rs));
-                }
-            }
-
-            System.out.println("✅ " + reservations.size() + " réservation(s) trouvée(s) pour l'hotel ID : " + idHotel);
-
-        } catch (SQLException e) {
-            System.err.println("❌ Erreur lors de la recherche par hotel : " + e.getMessage());
-            e.printStackTrace();
-        }
-
-        return reservations;
-    }
-
     // UPDATE
     public boolean update(Reservation reservation) {
-        String sql = "UPDATE reservations SET id_hotel = ?, id_client = ?, nbPassager = ? WHERE id = ?";
+        String sql = "UPDATE reservations SET id_hotel = ?, id_client = ?, nbPassager = ?, date_heure = ? WHERE id = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -158,7 +99,8 @@ public class ReservationDAO {
             stmt.setInt(1, reservation.getIdHotel());
             stmt.setString(2, reservation.getIdClient());
             stmt.setInt(3, reservation.getNbPassager());
-            stmt.setInt(4, reservation.getId());
+            stmt.setTimestamp(4, reservation.getDateHeure());
+            stmt.setInt(5, reservation.getId());
 
             int rowsAffected = stmt.executeUpdate();
 
@@ -198,33 +140,7 @@ public class ReservationDAO {
         return false;
     }
 
-    // READ BY DATE
-    public List<Reservation> findByDate(java.sql.Date date) {
-        List<Reservation> reservations = new ArrayList<>();
-        String sql = "SELECT * FROM reservations WHERE DATE(date_heure) = ? ORDER BY date_heure";
-
-        try (Connection conn = DatabaseConnection.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setDate(1, date);
-
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    reservations.add(mapResultSetToReservation(rs));
-                }
-            }
-
-            System.out.println("✅ " + reservations.size() + " réservation(s) trouvée(s) pour la date : " + date);
-
-        } catch (SQLException e) {
-            System.err.println("❌ Erreur lors de la recherche par date : " + e.getMessage());
-            e.printStackTrace();
-        }
-
-        return reservations;
-    }
-
-    // MÉTHODE UTILITAIRE : Mapper ResultSet vers Reservation
+    // MÉTHODE UTILITAIRE
     private Reservation mapResultSetToReservation(ResultSet rs) throws SQLException {
         Reservation reservation = new Reservation();
         reservation.setId(rs.getInt("id"));

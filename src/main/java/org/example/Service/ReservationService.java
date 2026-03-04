@@ -4,8 +4,6 @@ import org.example.DAO.ReservationDAO;
 import org.example.Model.Reservation;
 import org.example.DTO.ReservationDTO;
 
-import java.sql.Date;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -16,21 +14,6 @@ public class ReservationService {
     public ReservationService() {
         this.reservationDAO = new ReservationDAO();
     } 
-    
-    public List<ReservationDTO> getListReservationByDate(Date date) {
-        if (date == null) {
-            System.err.println("La date ne peut pas être null");
-            return new ArrayList<>();
-        }
-        
-        System.out.println("Recherche des réservations pour la date : " + date);
-        List<Reservation> reservations = reservationDAO.findByDate(date);
-        
-        // Convertir en DTO
-        return reservations.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
     
     /**
      * Récupère toutes les réservations sous forme de DTO
