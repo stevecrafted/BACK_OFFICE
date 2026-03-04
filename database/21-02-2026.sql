@@ -1,6 +1,6 @@
 
 CREATE TABLE Carburant(
-   idCarburant ,
+   idCarburant SERIAL,
    libelle VARCHAR(50) ,
    PRIMARY KEY(idCarburant)
 );

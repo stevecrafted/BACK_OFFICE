@@ -219,4 +219,33 @@ public class VoitureDAO {
         
         return voiture;
     }
+
+    // FIND VOITURES BY DATE DE DEPART (via reservations.date_heure et reservations.idVoiture)
+    public List<Voiture> findByDateDepart(java.sql.Date date) {
+        List<Voiture> voitures = new ArrayList<>();
+        String sql = "SELECT DISTINCT v.* FROM Voiture v " +
+                     "INNER JOIN reservations r ON r.idVoiture = v.idVoiture " +
+                     "WHERE DATE(r.date_heure) = ? " +
+                     "ORDER BY v.idVoiture";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setDate(1, date);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    voitures.add(mapResultSetToVoiture(rs));
+                }
+            }
+
+            System.out.println("✅ " + voitures.size() + " voiture(s) avec départ le " + date);
+
+        } catch (SQLException e) {
+            System.err.println("❌ Erreur lors de la recherche par date de départ : " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return voitures;
+    }
 }
