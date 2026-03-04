@@ -140,6 +140,84 @@ public class ReservationDAO {
         return false;
     }
 
+    // READ BY CLIENT
+    public List<Reservation> findByClient(String idClient) {
+        List<Reservation> reservations = new ArrayList<>();
+        String sql = "SELECT * FROM reservations WHERE id_client = ? ORDER BY date_heure DESC";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, idClient);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    reservations.add(mapResultSetToReservation(rs));
+                }
+            }
+
+            System.out.println("✅ " + reservations.size() + " réservation(s) trouvée(s) pour le client : " + idClient);
+
+        } catch (SQLException e) {
+            System.err.println("❌ Erreur lors de la recherche par client : " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return reservations;
+    }
+
+    // READ BY HOTEL
+    public List<Reservation> findByHotel(int idHotel) {
+        List<Reservation> reservations = new ArrayList<>();
+        String sql = "SELECT * FROM reservations WHERE id_hotel = ? ORDER BY date_heure DESC";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, idHotel);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    reservations.add(mapResultSetToReservation(rs));
+                }
+            }
+
+            System.out.println("✅ " + reservations.size() + " réservation(s) trouvée(s) pour l'hotel ID : " + idHotel);
+
+        } catch (SQLException e) {
+            System.err.println("❌ Erreur lors de la recherche par hotel : " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return reservations;
+    }
+
+    // READ BY DATE
+    public List<Reservation> findByDate(java.sql.Date date) {
+        List<Reservation> reservations = new ArrayList<>();
+        String sql = "SELECT * FROM reservations WHERE DATE(date_heure) = ? ORDER BY date_heure";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setDate(1, date);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    reservations.add(mapResultSetToReservation(rs));
+                }
+            }
+
+            System.out.println("✅ " + reservations.size() + " réservation(s) trouvée(s) pour la date : " + date);
+
+        } catch (SQLException e) {
+            System.err.println("❌ Erreur lors de la recherche par date : " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return reservations;
+    }
+
     // MÉTHODE UTILITAIRE
     private Reservation mapResultSetToReservation(ResultSet rs) throws SQLException {
         Reservation reservation = new Reservation();
