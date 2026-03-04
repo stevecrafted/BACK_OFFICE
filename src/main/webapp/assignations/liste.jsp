@@ -117,6 +117,9 @@
         <% } %>
 
         <div class="actions">
+            <a href="/assignations/simuler" class="btn btn-primary">
+                🎯 Nouvelle Simulation
+            </a>
             <form action="/assignations/auto" method="post" style="display: inline;">
                 <button type="submit" class="btn btn-primary">
                     ⚡ Lancer Assignation Automatique

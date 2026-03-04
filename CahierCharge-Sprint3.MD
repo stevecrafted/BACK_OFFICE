@@ -84,3 +84,28 @@ CREATE TABLE hotel(
     PRIMARY KEY(id)
 );
 test Pull Request
+
+
+Assignation 
+    L'assignation doit se presenter sous forme de simmulation d'abord (pas d'insertion de données juste afficher sur tableau)
+    On saisie un date puis : 
+    -On regroupe tte les resevation de cette date 
+    -On regroupe les traitement par vague c'est adire : 1 vague = essemble de traitement de  reservations dont la date heure de reservation sont egales
+    Pour chaque vague :
+    -Traitement 1 reservation 1 
+    -Chaque traitement 
+        -Prioriser le Reservation avec plus passager 
+        Deroulement traitement (chercher voiture compatible):
+            -Prioriser le remplissage de voiture  (si une voiture deja assigné mais place dispo >0 )
+                -Si nbr place dispo voiture >= reservatiuon.nbr Passager donc on assigne la reservation a  la voiture 
+                -Si non ou si pas encore de voiture qui possede deja des passager on cherche d'autre voiture par rapport a ces regle de gestion :
+                    -nbr place dispo >= nbr passager et prioriser la voiture dans l'ecart |(nbrplaceDispo-nbrpassager)| soit le plus minim que possible
+                    -Si tous nbr dispo sont egaux :
+                        - On privilegie les diesel 
+                            Si pas de diesel ou tout est diesel on fais random
+        puis on continue le traitement par la reservation suivant 
+    a la fin d'un vague de traitement
+        - on ne doit plus considerer les voitures assigné pour cette vague lors de la prochaine vague de traitement 
+        
+
+
