@@ -2,6 +2,7 @@
 <%@ page import="org.example.Model.*" %>
 <%@ page import="org.example.DAO.HotelDAO" %>
 <%@ page import="java.util.*" %>
+<%@ page import="java.text.SimpleDateFormat" %>
 <!DOCTYPE html>
 <html>
 <head>
@@ -165,6 +166,69 @@
             color: #999;
             font-style: italic;
         }
+        .itineraire-section {
+            background: #f0f7ff;
+            border: 1px solid #b3d4fc;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px 0 20px 0;
+        }
+        .itineraire-section h4 {
+            margin: 0 0 10px 0;
+            color: #1565c0;
+        }
+        .etape {
+            display: flex;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px dashed #ccc;
+        }
+        .etape:last-child {
+            border-bottom: none;
+        }
+        .etape-num {
+            background: #1565c0;
+            color: white;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+        .etape-detail {
+            flex-grow: 1;
+        }
+        .etape-lieu {
+            font-weight: bold;
+            color: #333;
+        }
+        .etape-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 2px;
+        }
+        .etape-arrow {
+            color: #1565c0;
+            font-size: 18px;
+            margin: 0 8px;
+        }
+        .itineraire-resume {
+            display: flex;
+            gap: 20px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 2px solid #b3d4fc;
+            font-size: 13px;
+            color: #333;
+        }
+        .itineraire-resume strong {
+            color: #1565c0;
+        }
     </style>
 </head>
 <body>
@@ -176,6 +240,7 @@
             String message = (String) request.getAttribute("message");
             ResultatSimulation resultat = (ResultatSimulation) request.getAttribute("resultat");
             String dateSimulation = (String) request.getAttribute("dateSimulation");
+            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
         %>
 
         <% if (error != null) { %>
@@ -295,6 +360,46 @@
                         <% } %>
                     </tbody>
                 </table>
+
+                <!-- Itinéraire de chaque voiture de cette vague -->
+                <% for (SimulationAssignation sa : entry.getValue()) {
+                    if (sa.getItineraire() != null && !sa.getItineraire().isEmpty()) {
+                %>
+                <div class="itineraire-section">
+                    <h4>🗺️ Itinéraire - Voiture <%= sa.getVoiture().getRef() %></h4>
+                    <% 
+                        int etapeNum = 1;
+                        for (EtapeItineraire etape : sa.getItineraire()) { 
+                    %>
+                    <div class="etape">
+                        <div class="etape-num"><%= etapeNum %></div>
+                        <div class="etape-detail">
+                            <div class="etape-lieu">
+                                <%= etape.getLieuDepart().getNom() %>
+                                <span class="etape-arrow">→</span>
+                                <%= etape.getLieuArrivee().getNom() %>
+                            </div>
+                            <div class="etape-info">
+                                📏 <%= String.format("%.2f", etape.getDistanceKm()) %> km
+                                &nbsp;|&nbsp;
+                                🕐 Départ: <%= sdf.format(etape.getHeureDepart()) %>
+                                &nbsp;→&nbsp;
+                                🕐 Arrivée: <%= sdf.format(etape.getHeureArrivee()) %>
+                            </div>
+                        </div>
+                    </div>
+                    <% 
+                        etapeNum++;
+                        } 
+                    %>
+                    <div class="itineraire-resume">
+                        <span>📏 <strong>Distance totale:</strong> <%= String.format("%.2f", sa.getDistanceTotale()) %> km</span>
+                        <span>🕐 <strong>Départ:</strong> <%= sdf.format(sa.getHeureDepart()) %></span>
+                        <span>🕐 <strong>Retour:</strong> <%= sdf.format(sa.getHeureRetour()) %></span>
+                    </div>
+                </div>
+                <% } } %>
+
             <%
                     numeroVague++;
                 }
