@@ -140,7 +140,7 @@
                         <th>Réservation</th>
                         <th>Client</th>
                         <th>Passagers</th>
-                        <th>Hotel</th>
+                        <th>Lieu</th>
                         <th>Date Assignation</th>
                         <th>Actions</th>
                     </tr>
@@ -162,7 +162,7 @@
                             <td><span class="badge badge-info">#<%= reservation.getId() %></span></td>
                             <td><%= reservation.getIdClient() %></td>
                             <td><strong><%= reservation.getNbPassager() %></strong> passagers</td>
-                            <td>Hotel #<%= reservation.getIdHotel() %></td>
+                            <td>Lieu #<%= reservation.getIdLieu() %></td>
                             <td><%= assignation.getDateAssignation() %></td>
                             <td>
                                 <form action="/assignations/delete" method="post" style="display: inline;" 

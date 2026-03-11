@@ -1,7 +1,8 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ page import="org.example.Model.*" %>
-<%@ page import="org.example.DAO.HotelDAO" %>
+<%@ page import="org.example.DAO.LieuDAO" %>
 <%@ page import="java.util.*" %>
+<%@ page import="java.text.SimpleDateFormat" %>
 <!DOCTYPE html>
 <html>
 <head>
@@ -255,14 +256,17 @@
                             <th>Référence</th>
                             <th>Capacité</th>
                             <th>Carburant</th>
-                            <th>Réservations (Client → Hôtel)</th>
+                            <th>Réservations (Client → Lieu)</th>
                             <th>Passagers</th>
                             <th>Places Restantes</th>
+                            <th>Date/Heure Départ</th>
+                            <th>Date/Heure Arrivée</th>
                         </tr>
                     </thead>
                     <tbody>
                         <%
-                            HotelDAO hotelDAO = new HotelDAO();
+                            LieuDAO lieuDAO = new LieuDAO();
+                            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
                             for (SimulationAssignation sa : entry.getValue()) {
                                 Voiture voiture = sa.getVoiture();
                                 int totalPassagers = 0;
@@ -275,22 +279,22 @@
                             <td><strong><%= voiture.getRef() %></strong></td>
                             <td><%= voiture.getCapacite() %> places</td>
                             <td>
-                                <% if (voiture.getCarburant() != null) { %>
-                                    <span class="badge <%= voiture.getCarburant().getLibelle().equalsIgnoreCase("Diesel") ? "badge-diesel" : "badge-essence" %>">
-                                        <%= voiture.getCarburant().getLibelle() %>
-                                    </span>
-                                <% } %>
+                                <span class="badge <%= "D".equals(voiture.getCarburant()) ? "badge-diesel" : "badge-essence" %>">
+                                    <%= voiture.getCarburantLibelle() %>
+                                </span>
                             </td>
                             <td>
                                 <% for (Reservation r : sa.getReservations()) { 
-                                    Hotel hotel = hotelDAO.findById(r.getIdHotel());
-                                    String hotelNom = hotel != null ? hotel.getNom() : "Hotel #" + r.getIdHotel();
+                                    Lieu lieu = lieuDAO.findById(r.getIdLieu());
+                                    String lieuNom = lieu != null ? lieu.getLibelle() : "Lieu #" + r.getIdLieu();
                                 %>
-                                    #<%= r.getId() %>: <%= r.getIdClient() %> → <%= hotelNom %> (<%= r.getNbPassager() %>p)<br>
+                                    #<%= r.getId() %>: <%= r.getIdClient() %> → <%= lieuNom %> (<%= r.getNbPassager() %>p)<br>
                                 <% } %>
                             </td>
                             <td><strong><%= totalPassagers %></strong></td>
                             <td><%= sa.getPlacesRestantes() %></td>
+                            <td><%= sa.getDateHeureDepart() != null ? sdf.format(sa.getDateHeureDepart()) : "-" %></td>
+                            <td><%= sa.getDateHeureArrivee() != null ? sdf.format(sa.getDateHeureArrivee()) : "-" %></td>
                         </tr>
                         <% } %>
                     </tbody>
@@ -302,7 +306,7 @@
 
             <!-- Réservations non assignées -->
             <% if (!resultat.getReservationsNonAssignees().isEmpty()) { 
-                HotelDAO hotelDAO2 = new HotelDAO();
+                LieuDAO lieuDAO2 = new LieuDAO();
             %>
                 <div class="vague-header" style="background-color: #f44336;">
                     ❌ RÉSERVATIONS NON ASSIGNÉES
@@ -312,20 +316,20 @@
                         <tr>
                             <th>ID</th>
                             <th>Client</th>
-                            <th>Hôtel</th>
+                            <th>Lieu</th>
                             <th>Passagers</th>
                             <th>Date/Heure</th>
                         </tr>
                     </thead>
                     <tbody>
                         <% for (Reservation r : resultat.getReservationsNonAssignees()) { 
-                            Hotel hotel = hotelDAO2.findById(r.getIdHotel());
-                            String hotelNom = hotel != null ? hotel.getNom() : "Hotel #" + r.getIdHotel();
+                            Lieu lieu2 = lieuDAO2.findById(r.getIdLieu());
+                            String lieuNom2 = lieu2 != null ? lieu2.getLibelle() : "Lieu #" + r.getIdLieu();
                         %>
                         <tr>
                             <td>#<%= r.getId() %></td>
                             <td><%= r.getIdClient() %></td>
-                            <td><%= hotelNom %></td>
+                            <td><%= lieuNom2 %></td>
                             <td><%= r.getNbPassager() %></td>
                             <td><%= r.getDateHeure() %></td>
                         </tr>

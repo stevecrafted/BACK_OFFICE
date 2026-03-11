@@ -2,10 +2,10 @@ package org.example.Controlleur;
 
 import org.annotation.*;
 import org.example.DAO.ReservationDAO;
-import org.example.DAO.HotelDAO;
+import org.example.DAO.LieuDAO;
 import org.example.DAO.AssignationDAO;
 import org.example.Model.Reservation;
-import org.example.Model.Hotel;
+import org.example.Model.Lieu;
 import org.example.Model.Assignation;
 import org.Entity.ModelView;
 
@@ -20,7 +20,7 @@ import java.util.Map;
 public class ReservationController {
 
     private ReservationDAO reservationDAO = new ReservationDAO();
-    private HotelDAO hotelDAO = new HotelDAO();
+    private LieuDAO lieuDAO = new LieuDAO();
     private AssignationDAO assignationDAO = new AssignationDAO();
 
     /**
@@ -40,8 +40,8 @@ public class ReservationController {
             Map<String, Object> detail = new HashMap<>();
             detail.put("reservation", reservation);
             
-            Hotel hotel = hotelDAO.findById(reservation.getIdHotel());
-            detail.put("hotel", hotel);
+            Lieu lieu = lieuDAO.findById(reservation.getIdLieu());
+            detail.put("lieu", lieu);
             
             Assignation assignation = assignationDAO.findByReservation(reservation.getId());
             detail.put("assignation", assignation);
@@ -73,8 +73,8 @@ public class ReservationController {
         mv.setView("reservations/form.jsp");
         mv.addAttribute("action", "create");
 
-        List<Hotel> hotels = hotelDAO.findAll();
-        mv.addAttribute("hotels", hotels);
+        List<Lieu> lieux = lieuDAO.findByType("hotel");
+        mv.addAttribute("lieux", lieux);
 
         return mv;
     }
@@ -84,12 +84,12 @@ public class ReservationController {
      */
     @PostMapping("/reservations/create")
     public ModelView creerReservation(
-            @AnnotationRequestParam("idHotel") int idHotel,
+            @AnnotationRequestParam("idLieu") int idLieu,
             @AnnotationRequestParam("idClient") String idClient,
             @AnnotationRequestParam("nbPassager") int nbPassager,
             @AnnotationRequestParam("dateHeure") String dateHeureStr) {
 
-        Reservation reservation = new Reservation(idHotel, idClient, nbPassager);
+        Reservation reservation = new Reservation(idLieu, idClient, nbPassager);
 
         try {
             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm");
@@ -97,7 +97,7 @@ public class ReservationController {
             Timestamp timestamp = new Timestamp(parsedDate.getTime());
             reservation.setDateHeure(timestamp);
         } catch (Exception e) {
-            System.err.println("❌ Erreur de parsing de date : " + e.getMessage());
+            System.err.println("Erreur de parsing de date : " + e.getMessage());
         }
 
         ModelView mv = new ModelView();
@@ -110,8 +110,8 @@ public class ReservationController {
             mv.addAttribute("error", "Erreur lors de la création");
             mv.addAttribute("reservation", reservation);
 
-            List<Hotel> hotels = hotelDAO.findAll();
-            mv.addAttribute("hotels", hotels);
+            List<Lieu> lieux = lieuDAO.findByType("hotel");
+            mv.addAttribute("lieux", lieux);
         }
 
         return mv;

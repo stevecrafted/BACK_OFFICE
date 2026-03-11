@@ -12,6 +12,9 @@ public class SimulationAssignationService {
 
     private ReservationDAO reservationDAO = new ReservationDAO();
     private VoitureDAO voitureDAO = new VoitureDAO();
+    private DistanceDAO distanceDAO = new DistanceDAO();
+    private LieuDAO lieuDAO = new LieuDAO();
+    private ParametreDAO parametreDAO = new ParametreDAO();
 
     /**
      * Simule l'assignation des voitures pour une date donnée
@@ -35,48 +38,52 @@ public class SimulationAssignationService {
 
         System.out.println("📋 " + reservations.size() + " réservation(s) trouvée(s)\n");
 
-        // 2. Regrouper les réservations par vague (même heure)
-        Map<Timestamp, List<Reservation>> vagues = regrouperParVague(reservations);
+        // 2. Regrouper les réservations par vague (même date, heure, minute - sans secondes)
+        Map<String, List<Reservation>> vagues = regrouperParVague(reservations);
         resultat.setNbVagues(vagues.size());
 
         System.out.println("🌊 " + vagues.size() + " vague(s) de traitement\n");
 
-        // 3. Récupérer toutes les voitures disponibles
+        // 3. Récupérer toutes les voitures disponibles et la vitesse moyenne
         List<Voiture> toutesVoitures = voitureDAO.findAll();
-        Set<Integer> voituresUtilisees = new HashSet<>();
+        double vitesseMoyenne = parametreDAO.getVM();
+        Lieu aeroport = lieuDAO.findAeroport();
 
-        // 4. Traiter chaque vague
+        // Toutes les voitures sont disponibles au début (elles reviennent à l'aéroport après chaque trajet)
+        // Mais dans une même vague, une voiture ne peut être utilisée qu'une fois
+
+        // 4. Traiter chaque vague (trié par temps)
+        List<String> vaguesTriees = new ArrayList<>(vagues.keySet());
+        Collections.sort(vaguesTriees);
+
         int numeroVague = 1;
-        for (Map.Entry<Timestamp, List<Reservation>> entry : vagues.entrySet()) {
-            Timestamp heureVague = entry.getKey();
-            List<Reservation> reservationsVague = entry.getValue();
+        for (String cleVague : vaguesTriees) {
+            List<Reservation> reservationsVague = vagues.get(cleVague);
 
             System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-            System.out.println("🌊 VAGUE #" + numeroVague + " - " + heureVague);
+            System.out.println("🌊 VAGUE #" + numeroVague + " - " + cleVague);
             System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
             // Trier par nombre de passagers décroissant
             reservationsVague.sort((r1, r2) -> Integer.compare(r2.getNbPassager(), r1.getNbPassager()));
 
-            // Voitures disponibles pour cette vague (pas encore utilisées)
-            List<Voiture> voituresDisponibles = toutesVoitures.stream()
-                    .filter(v -> !voituresUtilisees.contains(v.getIdVoiture()))
-                    .collect(Collectors.toList());
+            // Copier la liste des voitures disponibles pour cette vague
+            List<Voiture> voituresDisponibles = new ArrayList<>(toutesVoitures);
 
             // Assignations temporaires pour cette vague
-            Map<Integer, SimulationAssignation> assignationsVague = new HashMap<>();
+            Map<Integer, SimulationAssignation> assignationsVague = new LinkedHashMap<>();
 
             // Traiter chaque réservation de la vague
             for (Reservation reservation : reservationsVague) {
                 System.out.println("\n📌 Réservation #" + reservation.getId() + 
-                                   " - " + reservation.getNbPassager() + " passagers - Hotel #" + 
-                                   reservation.getIdHotel());
+                                   " - " + reservation.getNbPassager() + " passagers - Lieu #" + 
+                                   reservation.getIdLieu());
 
                 SimulationAssignation assignation = trouverMeilleureVoiture(
                     reservation, 
                     voituresDisponibles, 
                     assignationsVague,
-                    heureVague
+                    reservation.getDateHeure()
                 );
 
                 if (assignation != null) {
@@ -89,10 +96,10 @@ public class SimulationAssignationService {
                 }
             }
 
-            // Ajouter les assignations de cette vague au résultat
+            // Calculer les heures d'arrivée pour chaque assignation de cette vague
             for (SimulationAssignation assignation : assignationsVague.values()) {
+                calculerHeuresTrajet(assignation, aeroport, vitesseMoyenne);
                 resultat.ajouterAssignation(assignation);
-                voituresUtilisees.add(assignation.getVoiture().getIdVoiture());
             }
 
             numeroVague++;
@@ -121,7 +128,8 @@ public class SimulationAssignationService {
 
         int nbPassagers = reservation.getNbPassager();
 
-        // 1. Priorité: Voitures déjà assignées avec places disponibles
+        // 1. D'abord, vérifier si une voiture déjà assignée dans cette vague a encore de la place
+        // On cherche parmi les assignations existantes par ordre de création
         for (SimulationAssignation assignation : assignationsVague.values()) {
             if (assignation.peutAccueillir(nbPassagers)) {
                 assignation.ajouterReservation(reservation);
@@ -130,10 +138,10 @@ public class SimulationAssignationService {
             }
         }
 
-        // 2. Chercher une nouvelle voiture (exclure celles déjà utilisées dans cette vague)
+        // 2. Chercher une nouvelle voiture parmi celles non utilisées dans cette vague
         List<Voiture> voituresCompatibles = voituresDisponibles.stream()
                 .filter(v -> v.getCapacite() >= nbPassagers)
-                .filter(v -> !assignationsVague.containsKey(v.getIdVoiture())) // Exclure voitures déjà assignées dans cette vague
+                .filter(v -> !assignationsVague.containsKey(v.getIdVoiture()))
                 .collect(Collectors.toList());
 
         if (voituresCompatibles.isEmpty()) {
@@ -141,41 +149,22 @@ public class SimulationAssignationService {
             return null;
         }
 
-        // 3. Calculer l'écart pour chaque voiture
-        Map<Voiture, Integer> ecarts = new HashMap<>();
-        for (Voiture voiture : voituresCompatibles) {
-            int ecart = Math.abs(voiture.getCapacite() - nbPassagers);
-            ecarts.put(voiture, ecart);
-        }
+        // 3. Calculer l'écart pour chaque voiture (capacité - nbPassagers)
+        int ecartMin = voituresCompatibles.stream()
+                .mapToInt(v -> v.getCapacite() - nbPassagers)
+                .min().orElse(0);
 
-        // 4. Trouver l'écart minimum
-        int ecartMin = Collections.min(ecarts.values());
-
-        // 5. Filtrer les voitures avec l'écart minimum
+        // 4. Filtrer les voitures avec l'écart minimum
         List<Voiture> voituresOptimales = voituresCompatibles.stream()
-                .filter(v -> ecarts.get(v) == ecartMin)
+                .filter(v -> (v.getCapacite() - nbPassagers) == ecartMin)
                 .collect(Collectors.toList());
 
-        // 6. Si plusieurs voitures, privilégier diesel
-        List<Voiture> voituresDiesel = voituresOptimales.stream()
-                .filter(v -> v.getCarburant() != null && 
-                            "Diesel".equalsIgnoreCase(v.getCarburant().getLibelle()))
-                .collect(Collectors.toList());
+        // 5. Priorité carburant: D (Diesel) > H (Hybride) > E (Essence)
+        Voiture voitureChoisie = choisirParCarburant(voituresOptimales);
 
-        Voiture voitureChoisie;
-        if (!voituresDiesel.isEmpty()) {
-            System.out.println("   → Écart minimal: " + ecartMin + " | Priorité Diesel");
-            voitureChoisie = voituresDiesel.size() == 1 ? 
-                            voituresDiesel.get(0) : 
-                            voituresDiesel.get(new Random().nextInt(voituresDiesel.size()));
-        } else {
-            System.out.println("   → Écart minimal: " + ecartMin + " | Choix parmi " + voituresOptimales.size() + " voiture(s)");
-            voitureChoisie = voituresOptimales.size() == 1 ? 
-                            voituresOptimales.get(0) : 
-                            voituresOptimales.get(new Random().nextInt(voituresOptimales.size()));
-        }
+        System.out.println("   → Écart minimal: " + ecartMin + " | Carburant: " + voitureChoisie.getCarburantLibelle());
 
-        // 7. Créer une nouvelle assignation
+        // 6. Créer une nouvelle assignation
         SimulationAssignation assignation = new SimulationAssignation(voitureChoisie, heureVague);
         assignation.ajouterReservation(reservation);
         assignationsVague.put(voitureChoisie.getIdVoiture(), assignation);
@@ -184,14 +173,120 @@ public class SimulationAssignationService {
     }
 
     /**
-     * Regroupe les réservations par vague (même heure)
+     * Choisit la voiture selon la priorité carburant: D > H > E, puis random
      */
-    private Map<Timestamp, List<Reservation>> regrouperParVague(List<Reservation> reservations) {
-        Map<Timestamp, List<Reservation>> vagues = new TreeMap<>();
+    private Voiture choisirParCarburant(List<Voiture> voitures) {
+        if (voitures.size() == 1) return voitures.get(0);
+
+        // Priorité D > H > E
+        List<Voiture> diesel = voitures.stream().filter(v -> "D".equals(v.getCarburant())).collect(Collectors.toList());
+        if (!diesel.isEmpty()) {
+            return diesel.size() == 1 ? diesel.get(0) : diesel.get(new Random().nextInt(diesel.size()));
+        }
+
+        List<Voiture> hybride = voitures.stream().filter(v -> "H".equals(v.getCarburant())).collect(Collectors.toList());
+        if (!hybride.isEmpty()) {
+            return hybride.size() == 1 ? hybride.get(0) : hybride.get(new Random().nextInt(hybride.size()));
+        }
+
+        List<Voiture> essence = voitures.stream().filter(v -> "E".equals(v.getCarburant())).collect(Collectors.toList());
+        if (!essence.isEmpty()) {
+            return essence.size() == 1 ? essence.get(0) : essence.get(new Random().nextInt(essence.size()));
+        }
+
+        return voitures.get(new Random().nextInt(voitures.size()));
+    }
+
+    /**
+     * Calcule les heures de départ et d'arrivée pour une assignation
+     * - Départ = date_heure de la réservation
+     * - Route: aéroport -> lieu le plus proche -> lieu suivant -> ... -> dernier lieu -> retour aéroport
+     * - Si distances similaires, ordre alphabétique du lieu
+     */
+    private void calculerHeuresTrajet(SimulationAssignation assignation, Lieu aeroport, double vitesseMoyenne) {
+        // L'heure de départ est celle de la vague (= date_heure des réservations)
+        Timestamp depart = assignation.getHeureVague();
+        assignation.setDateHeureDepart(depart);
+
+        if (aeroport == null) {
+            // Pas d'aéroport configuré, on ne peut pas calculer
+            assignation.setDateHeureArrivee(depart);
+            return;
+        }
+
+        // Récupérer tous les lieux distincts des réservations
+        List<Integer> idLieux = assignation.getReservations().stream()
+                .map(Reservation::getIdLieu)
+                .distinct()
+                .collect(Collectors.toList());
+
+        if (idLieux.isEmpty()) {
+            assignation.setDateHeureArrivee(depart);
+            return;
+        }
+
+        // Récupérer les objets Lieu
+        List<Lieu> lieux = new ArrayList<>();
+        for (int idLieu : idLieux) {
+            Lieu lieu = lieuDAO.findById(idLieu);
+            if (lieu != null) {
+                lieux.add(lieu);
+            }
+        }
+
+        // Trier les lieux par distance à l'aéroport (plus proche en premier)
+        // Si distance égale, ordre alphabétique du libellé
+        int idAeroport = aeroport.getId();
+        lieux.sort((l1, l2) -> {
+            Double d1 = distanceDAO.getDistance(idAeroport, l1.getId());
+            Double d2 = distanceDAO.getDistance(idAeroport, l2.getId());
+            double dist1 = d1 != null ? d1 : Double.MAX_VALUE;
+            double dist2 = d2 != null ? d2 : Double.MAX_VALUE;
+            int cmp = Double.compare(dist1, dist2);
+            if (cmp != 0) return cmp;
+            return l1.getLibelle().compareToIgnoreCase(l2.getLibelle());
+        });
+
+        // Calculer la distance totale du trajet
+        // Aéroport -> lieu1 -> lieu2 -> ... -> lieuN -> aéroport
+        double distanceTotale = 0.0;
+        int positionCourante = idAeroport;
+
+        for (Lieu lieu : lieux) {
+            Double dist = distanceDAO.getDistance(positionCourante, lieu.getId());
+            if (dist != null) {
+                distanceTotale += dist;
+            }
+            positionCourante = lieu.getId();
+        }
+
+        // Retour à l'aéroport depuis le dernier lieu
+        Double distRetour = distanceDAO.getDistance(positionCourante, idAeroport);
+        if (distRetour != null) {
+            distanceTotale += distRetour;
+        }
+
+        // Calculer la durée en millisecondes: distance / vitesse = heures
+        double dureeHeures = distanceTotale / vitesseMoyenne;
+        long dureeMillis = (long) (dureeHeures * 3600 * 1000);
+
+        Timestamp arrivee = new Timestamp(depart.getTime() + dureeMillis);
+        assignation.setDateHeureArrivee(arrivee);
+
+        System.out.println("   🕐 Départ: " + depart + " | Distance: " + distanceTotale + " km | Arrivée: " + arrivee);
+    }
+
+    /**
+     * Regroupe les réservations par vague (même date, heure, minute - sans secondes)
+     */
+    private Map<String, List<Reservation>> regrouperParVague(List<Reservation> reservations) {
+        Map<String, List<Reservation>> vagues = new TreeMap<>();
 
         for (Reservation reservation : reservations) {
             Timestamp heure = reservation.getDateHeure();
-            vagues.computeIfAbsent(heure, k -> new ArrayList<>()).add(reservation);
+            // Tronquer aux minutes (ignorer les secondes)
+            String cleVague = String.format("%tF %tH:%tM", heure, heure, heure);
+            vagues.computeIfAbsent(cleVague, k -> new ArrayList<>()).add(reservation);
         }
 
         return vagues;

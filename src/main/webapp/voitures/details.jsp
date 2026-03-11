@@ -65,7 +65,7 @@
             
             <div class="detail-row">
                 <span class="label">Carburant:</span>
-                <span class="value"><%= voiture.getCarburant() != null ? voiture.getCarburant().getLibelle() : "N/A" %></span>
+                <span class="value"><%= voiture.getCarburantLibelle() %></span>
             </div>
         </div>
 

@@ -202,8 +202,6 @@ public class AssignationController {
                     assignation.setIdVoiture(simAssignation.getVoiture().getIdVoiture());
                     
                     if (assignationDAO.create(assignation)) {
-                        // Mettre à jour la réservation avec l'ID de la voiture
-                        reservationDAO.assignVoiture(reservation.getId(), simAssignation.getVoiture().getIdVoiture());
                         nbAssignations++;
                     }
                 }
