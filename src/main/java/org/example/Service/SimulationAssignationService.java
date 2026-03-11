@@ -49,8 +49,9 @@ public class SimulationAssignationService {
         double vitesseMoyenne = parametreDAO.getVM();
         Lieu aeroport = lieuDAO.findAeroport();
 
-        // Toutes les voitures sont disponibles au début (elles reviennent à l'aéroport après chaque trajet)
-        // Mais dans une même vague, une voiture ne peut être utilisée qu'une fois
+        // Une voiture n'est pas disponible tant qu'elle n'est pas revenue à l'aéroport
+        // On suit l'heure de retour de chaque voiture
+        Map<Integer, Timestamp> retourVoitures = new HashMap<>();
 
         // 4. Traiter chaque vague (trié par temps)
         List<String> vaguesTriees = new ArrayList<>(vagues.keySet());
@@ -67,8 +68,20 @@ public class SimulationAssignationService {
             // Trier par nombre de passagers décroissant
             reservationsVague.sort((r1, r2) -> Integer.compare(r2.getNbPassager(), r1.getNbPassager()));
 
-            // Copier la liste des voitures disponibles pour cette vague
-            List<Voiture> voituresDisponibles = new ArrayList<>(toutesVoitures);
+            // Heure de la vague (depuis la première réservation)
+            Timestamp heureVague = reservationsVague.get(0).getDateHeure();
+
+            // Filtrer les voitures disponibles : seulement celles revenues avant cette vague
+            List<Voiture> voituresDisponibles = new ArrayList<>();
+            for (Voiture v : toutesVoitures) {
+                Timestamp retour = retourVoitures.get(v.getIdVoiture());
+                if (retour == null || retour.getTime() <= heureVague.getTime()) {
+                    voituresDisponibles.add(v);
+                } else {
+                    System.out.println("   🚫 Voiture #" + v.getIdVoiture() + " (" + v.getRef() + 
+                                       ") indisponible - retour prévu à " + retour);
+                }
+            }
 
             // Assignations temporaires pour cette vague
             Map<Integer, SimulationAssignation> assignationsVague = new LinkedHashMap<>();
@@ -97,9 +110,12 @@ public class SimulationAssignationService {
             }
 
             // Calculer les heures d'arrivée pour chaque assignation de cette vague
+            // et mettre à jour l'heure de retour de chaque voiture
             for (SimulationAssignation assignation : assignationsVague.values()) {
                 calculerHeuresTrajet(assignation, aeroport, vitesseMoyenne);
                 resultat.ajouterAssignation(assignation);
+                // Enregistrer l'heure de retour (= heure d'arrivée à l'aéroport)
+                retourVoitures.put(assignation.getVoiture().getIdVoiture(), assignation.getDateHeureArrivee());
             }
 
             numeroVague++;

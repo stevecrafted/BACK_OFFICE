@@ -207,7 +207,7 @@ public class AssignationController {
                 }
             }
             
-            mv.setView("redirect:/assignations");
+            mv.setView("assignations/simulation.jsp");
             mv.addAttribute("message", nbAssignations + " assignation(s) confirmée(s) et enregistrée(s)");
             
         } catch (Exception e) {
