@@ -1,7 +1,8 @@
-\c postgres
-DROP DATABASE gde;
-CREATE DATABASE gde;
-\c gde
+-- ========================================
+-- SCRIPT DE RÉINITIALISATION COMPLÈTE
+-- Date: 03-03-2026
+-- ========================================
+-- Ce script supprime toutes les tables et les recrée avec les données de test
 
 -- ========================================
 -- 1. SUPPRESSION DE TOUTES LES TABLES
@@ -96,57 +97,35 @@ CREATE TABLE token_validite(
 -- ========================================
 
 -- Carburants
-INSERT INTO Carburant (libelle) VALUES ('Essence');      -- id=1
-INSERT INTO Carburant (libelle) VALUES ('Diesel');       -- id=2 
+INSERT INTO Carburant (libelle) VALUES ('Essence');
+INSERT INTO Carburant (libelle) VALUES ('Diesel'); 
 
--- Voitures
-INSERT INTO Voiture (Capacite, ref_, idCarburant) VALUES (5, 'VOI0001', 1);  -- id=1, Essence
-INSERT INTO Voiture (Capacite, ref_, idCarburant) VALUES (7, 'VOI0002', 2);  -- id=2, Diesel
-INSERT INTO Voiture (Capacite, ref_, idCarburant) VALUES (4, 'VOI0003', 1);  -- id=3, Essence
-INSERT INTO Voiture (Capacite, ref_, idCarburant) VALUES (5, 'VOI0004', 2);  -- id=4, Électrique
+-- Voitures (le ref sera généré automatiquement par l'application)
+INSERT INTO Voiture (Capacite, ref_, idCarburant) VALUES (5, 'VOI0001', 1);
+INSERT INTO Voiture (Capacite, ref_, idCarburant) VALUES (7, 'VOI0002', 2);
+INSERT INTO Voiture (Capacite, ref_, idCarburant) VALUES (4, 'VOI0003', 1);
+INSERT INTO Voiture (Capacite, ref_, idCarburant) VALUES (5, 'VOI0004', 3);
 
--- Hotels 
-INSERT INTO hotel (nom) VALUES ('Aeroport');  -- id=1
-INSERT INTO hotel (nom) VALUES ('Colbert');   -- id=2
-INSERT INTO hotel (nom) VALUES ('Novotel');   -- id=3
-INSERT INTO hotel (nom) VALUES ('Ibis');      -- id=4
-INSERT INTO hotel (nom) VALUES ('Lokanga');   -- id=5
-INSERT INTO hotel (nom) VALUES ('test');      -- id=6
+-- Hotels
+-- 1. Ajouter l'Aéroport dans la table hotel
+INSERT INTO hotel (nom) VALUES ('Aeroport');
+INSERT INTO parametre (nom, valeur) 
+VALUES ('AEROPORT_HOTEL_ID', (SELECT id FROM hotel WHERE nom = 'Aeroport'));
 
--- Paramètres système
-INSERT INTO parametre (nom, valeur) VALUES ('AEROPORT_HOTEL_ID', (SELECT id FROM hotel WHERE nom = 'Aeroport'));
-INSERT INTO parametre (nom, valeur) VALUES ('VM', '60');
-INSERT INTO parametre (nom, valeur) VALUES ('app_version', '1.0.0');
+INSERT INTO hotel (nom) VALUES ('Colbert');
+INSERT INTO hotel (nom) VALUES ('Novotel');
+INSERT INTO hotel (nom) VALUES ('Ibis');
+INSERT INTO hotel (nom) VALUES ('Lokanga');
+INSERT INTO hotel (nom) VALUES ('test'); 
 
--- ========================================
--- Distances depuis l'Aéroport (id=1)
--- ========================================
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 2, 7.00);   -- Aeroport ↔ Colbert
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 3, 4.00);   -- Aeroport ↔ Novotel
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 4, 10.00);  -- Aeroport ↔ Ibis
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 5, 6.00);   -- Aeroport ↔ Lokanga
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 6, 3.00);   -- Aeroport ↔ test
-
--- ========================================
--- Distances entre hôtels
--- ========================================
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (2, 3, 5.00);   -- Colbert ↔ Novotel
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (2, 4, 9.00);   -- Colbert ↔ Ibis
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (2, 5, 8.00);   -- Colbert ↔ Lokanga
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (2, 6, 3.00);   -- Colbert ↔ test
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (3, 4, 6.00);   -- Novotel ↔ Ibis
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (3, 5, 12.00);  -- Novotel ↔ Lokanga
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (3, 6, 8.00);   -- Novotel ↔ test
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (4, 5, 4.00);   -- Ibis ↔ Lokanga
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (4, 6, 11.00);  -- Ibis ↔ test
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (5, 6, 9.00);   -- Lokanga ↔ test
-
--- ========================================
--- 4. VÉRIFICATION
--- ========================================
-SELECT 'Carburants: ' || COUNT(*) FROM Carburant;
-SELECT 'Voitures: ' || COUNT(*) FROM Voiture;
-SELECT 'Hotels: ' || COUNT(*) FROM hotel;
-SELECT 'Distances: ' || COUNT(*) FROM distance;
-SELECT 'Paramètres: ' || COUNT(*) FROM parametre;
+-- Colbert (id=1) ↔ Aeroport (id=6) : 7 km
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 6, 7.00);
+-- Novotel (id=2) ↔ Aeroport (id=6) : 4 km
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (2, 6, 4.00);
+-- Ibis (id=3) ↔ Aeroport (id=6) : 10 km
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (3, 6, 10.00);
+-- Lokanga (id=4) ↔ Aeroport (id=6) : 6 km
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (4, 6, 6.00);
+-- test (id=5) ↔ Aeroport (id=6) : 3 km
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (5, 6, 3.00);
 

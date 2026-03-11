@@ -62,6 +62,7 @@ public class SimulationAssignationService {
         // 3. Récupérer toutes les voitures disponibles
         List<Voiture> toutesVoitures = voitureDAO.findAll();
         Set<Integer> voituresUtilisees = new HashSet<>();
+        Map<Integer, Timestamp> heuresRetourVoitures = new HashMap<>();
 
         // 4. Traiter chaque vague
         int numeroVague = 1;
@@ -72,6 +73,16 @@ public class SimulationAssignationService {
             System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             System.out.println(" VAGUE #" + numeroVague + " - " + heureVague);
             System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+            // Libérer les voitures revenues à l'aéroport avant cette vague
+            voituresUtilisees.removeIf(idVoiture -> {
+                Timestamp heureRetour = heuresRetourVoitures.get(idVoiture);
+                if (heureRetour != null && !heureRetour.after(heureVague)) {
+                    System.out.println("🔄 Voiture #" + idVoiture + " revenue à " + heureRetour + " → disponible");
+                    return true;
+                }
+                return false;
+            });
 
             // Trier par nombre de passagers décroissant
             reservationsVague.sort((r1, r2) -> Integer.compare(r2.getNbPassager(), r1.getNbPassager()));
@@ -112,6 +123,7 @@ public class SimulationAssignationService {
                 calculerItineraire(assignation, aeroport, vitesseMoyenne);
                 resultat.ajouterAssignation(assignation);
                 voituresUtilisees.add(assignation.getVoiture().getIdVoiture());
+                heuresRetourVoitures.put(assignation.getVoiture().getIdVoiture(), assignation.getHeureRetour());
             }
 
             numeroVague++;

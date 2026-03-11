@@ -203,17 +203,17 @@ public class AssignationController {
                     
                     if (assignationDAO.create(assignation)) {
                         // Mettre à jour la réservation avec l'ID de la voiture
-                        reservationDAO.assignVoiture(reservation.getId(), simAssignation.getVoiture().getIdVoiture());
+                        // reservationDAO.assignVoiture(reservation.getId(), simAssignation.getVoiture().getIdVoiture());
                         nbAssignations++;
                     }
                 }
             }
             
-            mv.setView("redirect:/assignations");
+            mv.setView("assignations/simulation.jsp");
             mv.addAttribute("message", nbAssignations + " assignation(s) confirmée(s) et enregistrée(s)");
             
         } catch (Exception e) {
-            mv.setView("redirect:/assignations/simuler");
+            mv.setView("assignations/simulation.jsp");
             mv.addAttribute("error", "Erreur lors de la confirmation : " + e.getMessage());
             e.printStackTrace();
         }
