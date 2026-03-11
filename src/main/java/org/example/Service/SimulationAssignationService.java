@@ -209,7 +209,6 @@ public class SimulationAssignationService {
         assignation.setDateHeureDepart(depart);
 
         if (aeroport == null) {
-            // Pas d'aéroport configuré, on ne peut pas calculer
             assignation.setDateHeureArrivee(depart);
             return;
         }
@@ -247,26 +246,36 @@ public class SimulationAssignationService {
             return l1.getLibelle().compareToIgnoreCase(l2.getLibelle());
         });
 
-        // Calculer la distance totale du trajet
-        // Aéroport -> lieu1 -> lieu2 -> ... -> lieuN -> aéroport
+        // Construire l'itinéraire étape par étape
+        List<EtapeItineraire> itineraire = new ArrayList<>();
         double distanceTotale = 0.0;
         int positionCourante = idAeroport;
+        String nomCourant = aeroport.getLibelle();
+        int etapeNum = 1;
 
         for (Lieu lieu : lieux) {
             Double dist = distanceDAO.getDistance(positionCourante, lieu.getId());
-            if (dist != null) {
-                distanceTotale += dist;
-            }
+            double distEtape = dist != null ? dist : 0.0;
+            double dureeMinutes = (distEtape / vitesseMoyenne) * 60.0;
+            
+            itineraire.add(new EtapeItineraire(etapeNum, nomCourant, lieu.getLibelle(), distEtape, dureeMinutes));
+            
+            distanceTotale += distEtape;
             positionCourante = lieu.getId();
+            nomCourant = lieu.getLibelle();
+            etapeNum++;
         }
 
         // Retour à l'aéroport depuis le dernier lieu
         Double distRetour = distanceDAO.getDistance(positionCourante, idAeroport);
-        if (distRetour != null) {
-            distanceTotale += distRetour;
-        }
+        double distRetourVal = distRetour != null ? distRetour : 0.0;
+        double dureeRetour = (distRetourVal / vitesseMoyenne) * 60.0;
+        itineraire.add(new EtapeItineraire(etapeNum, nomCourant, aeroport.getLibelle(), distRetourVal, dureeRetour));
+        distanceTotale += distRetourVal;
 
-        // Calculer la durée en millisecondes: distance / vitesse = heures
+        assignation.setItineraire(itineraire);
+
+        // Calculer la durée totale en millisecondes
         double dureeHeures = distanceTotale / vitesseMoyenne;
         long dureeMillis = (long) (dureeHeures * 3600 * 1000);
 

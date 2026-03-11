@@ -14,6 +14,7 @@ public class SimulationAssignation {
     private Timestamp heureVague;
     private Timestamp dateHeureDepart;
     private Timestamp dateHeureArrivee;
+    private List<EtapeItineraire> itineraire = new ArrayList<>();
 
     public SimulationAssignation(Voiture voiture, Timestamp heureVague) {
         this.voiture = voiture;
@@ -47,4 +48,15 @@ public class SimulationAssignation {
 
     public Timestamp getDateHeureArrivee() { return dateHeureArrivee; }
     public void setDateHeureArrivee(Timestamp dateHeureArrivee) { this.dateHeureArrivee = dateHeureArrivee; }
+
+    public List<EtapeItineraire> getItineraire() { return itineraire; }
+    public void setItineraire(List<EtapeItineraire> itineraire) { this.itineraire = itineraire; }
+
+    public double getDistanceTotale() {
+        return itineraire.stream().mapToDouble(EtapeItineraire::getDistanceKm).sum();
+    }
+
+    public double getDureeTotaleMinutes() {
+        return itineraire.stream().mapToDouble(EtapeItineraire::getDureeMinutes).sum();
+    }
 }

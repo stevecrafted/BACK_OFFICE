@@ -3,6 +3,7 @@
 <%@ page import="org.example.DAO.LieuDAO" %>
 <%@ page import="java.util.*" %>
 <%@ page import="java.text.SimpleDateFormat" %>
+<%@ page import="java.text.DecimalFormat" %>
 <!DOCTYPE html>
 <html>
 <head>
@@ -166,6 +167,40 @@
             color: #999;
             font-style: italic;
         }
+        .itineraire {
+            font-size: 12px;
+            line-height: 1.8;
+        }
+        .itineraire .etape {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+        }
+        .itineraire .etape-num {
+            background: #4CAF50;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        .itineraire .etape-detail {
+            color: #666;
+            font-size: 11px;
+        }
+        .itineraire .total-trajet {
+            margin-top: 5px;
+            padding-top: 5px;
+            border-top: 1px dashed #ccc;
+            font-weight: bold;
+            color: #333;
+        }
     </style>
 </head>
 <body>
@@ -261,12 +296,14 @@
                             <th>Places Restantes</th>
                             <th>Date/Heure Départ</th>
                             <th>Date/Heure Arrivée</th>
+                            <th>Itinéraire</th>
                         </tr>
                     </thead>
                     <tbody>
                         <%
                             LieuDAO lieuDAO = new LieuDAO();
                             SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
+                            DecimalFormat df = new DecimalFormat("#.##");
                             for (SimulationAssignation sa : entry.getValue()) {
                                 Voiture voiture = sa.getVoiture();
                                 int totalPassagers = 0;
@@ -295,6 +332,24 @@
                             <td><%= sa.getPlacesRestantes() %></td>
                             <td><%= sa.getDateHeureDepart() != null ? sdf.format(sa.getDateHeureDepart()) : "-" %></td>
                             <td><%= sa.getDateHeureArrivee() != null ? sdf.format(sa.getDateHeureArrivee()) : "-" %></td>
+                            <td>
+                                <div class="itineraire">
+                                <% if (sa.getItineraire() != null && !sa.getItineraire().isEmpty()) {
+                                    for (EtapeItineraire etape : sa.getItineraire()) { %>
+                                    <div class="etape">
+                                        <span class="etape-num"><%= etape.getOrdre() %></span>
+                                        <%= etape.getLieuDepart() %> → <%= etape.getLieuArrivee() %>
+                                        <span class="etape-detail">(<%= df.format(etape.getDistanceKm()) %> km, <%= df.format(etape.getDureeMinutes()) %> min)</span>
+                                    </div>
+                                <% } %>
+                                    <div class="total-trajet">
+                                        Total: <%= df.format(sa.getDistanceTotale()) %> km, <%= df.format(sa.getDureeTotaleMinutes()) %> min
+                                    </div>
+                                <% } else { %>
+                                    -
+                                <% } %>
+                                </div>
+                            </td>
                         </tr>
                         <% } %>
                     </tbody>
