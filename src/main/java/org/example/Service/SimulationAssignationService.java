@@ -15,10 +15,12 @@ public class SimulationAssignationService {
     private DistanceDAO distanceDAO = new DistanceDAO();
     private LieuDAO lieuDAO = new LieuDAO();
     private ParametreDAO parametreDAO = new ParametreDAO();
+    private AssignationDAO assignationDAO = new AssignationDAO();
 
     /**
      * Simule l'assignation des voitures pour une date donnée
      * SANS INSERTION EN BASE - Juste simulation
+     * Prend en compte les assignations déjà existantes en base
      */
     public ResultatSimulation simulerAssignation(Date dateSimulation) {
         ResultatSimulation resultat = new ResultatSimulation(dateSimulation);
@@ -38,22 +40,85 @@ public class SimulationAssignationService {
 
         System.out.println("📋 " + reservations.size() + " réservation(s) trouvée(s)\n");
 
-        // 2. Regrouper les réservations par vague (même date, heure, minute - sans secondes)
-        Map<String, List<Reservation>> vagues = regrouperParVague(reservations);
-        resultat.setNbVagues(vagues.size());
+        // 2. Récupérer les assignations existantes en base et exclure ces réservations
+        List<Assignation> assignationsExistantes = assignationDAO.findAll();
+        Set<Integer> reservationsDejaAssignees = new HashSet<>();
+        // Map: idVoiture -> liste de réservations déjà assignées à cette voiture
+        Map<Integer, List<Reservation>> voitureReservationsExistantes = new HashMap<>();
 
-        System.out.println("🌊 " + vagues.size() + " vague(s) de traitement\n");
+        for (Assignation a : assignationsExistantes) {
+            reservationsDejaAssignees.add(a.getIdReservation());
+            voitureReservationsExistantes
+                .computeIfAbsent(a.getIdVoiture(), k -> new ArrayList<>())
+                .add(reservationDAO.findById(a.getIdReservation()));
+        }
 
-        // 3. Récupérer toutes les voitures disponibles et la vitesse moyenne
+        // Filtrer les réservations : exclure celles déjà assignées
+        List<Reservation> reservationsASimuler = new ArrayList<>();
+        for (Reservation r : reservations) {
+            if (!reservationsDejaAssignees.contains(r.getId())) {
+                reservationsASimuler.add(r);
+            }
+        }
+
+        System.out.println("📌 " + reservationsDejaAssignees.size() + " réservation(s) déjà assignée(s) en base (exclues)");
+        System.out.println("📋 " + reservationsASimuler.size() + " réservation(s) à simuler\n");
+
+        // 3. Récupérer toutes les voitures et la vitesse moyenne
         List<Voiture> toutesVoitures = voitureDAO.findAll();
         double vitesseMoyenne = parametreDAO.getVM();
         Lieu aeroport = lieuDAO.findAeroport();
 
-        // Une voiture n'est pas disponible tant qu'elle n'est pas revenue à l'aéroport
-        // On suit l'heure de retour de chaque voiture
+        // 4. Construire les assignations existantes pour affichage et pré-remplir retourVoitures
         Map<Integer, Timestamp> retourVoitures = new HashMap<>();
 
-        // 4. Traiter chaque vague (trié par temps)
+        for (Map.Entry<Integer, List<Reservation>> entry : voitureReservationsExistantes.entrySet()) {
+            int idVoiture = entry.getKey();
+            List<Reservation> resExistantes = entry.getValue();
+            // Filtrer les réservations nulles (au cas où findById retourne null)
+            resExistantes.removeIf(r -> r == null);
+            if (resExistantes.isEmpty()) continue;
+
+            Voiture voiture = voitureDAO.findById(idVoiture);
+            if (voiture == null) continue;
+
+            // Regrouper par vague (même minute)
+            Map<String, List<Reservation>> vaguesExistantes = new TreeMap<>();
+            for (Reservation r : resExistantes) {
+                if (r.getDateHeure() != null) {
+                    Timestamp heure = r.getDateHeure();
+                    String cleVague = String.format("%tF %tH:%tM", heure, heure, heure);
+                    vaguesExistantes.computeIfAbsent(cleVague, k -> new ArrayList<>()).add(r);
+                }
+            }
+
+            for (List<Reservation> vagueRes : vaguesExistantes.values()) {
+                Timestamp heureVague = vagueRes.get(0).getDateHeure();
+                SimulationAssignation saExistante = new SimulationAssignation(voiture, heureVague);
+                for (Reservation r : vagueRes) {
+                    saExistante.ajouterReservation(r);
+                }
+                calculerHeuresTrajet(saExistante, aeroport, vitesseMoyenne);
+                resultat.ajouterAssignationExistante(saExistante);
+
+                // Pré-remplir retourVoitures avec l'heure de retour la plus tardive
+                Timestamp retourExistant = retourVoitures.get(idVoiture);
+                if (retourExistant == null || saExistante.getDateHeureArrivee().getTime() > retourExistant.getTime()) {
+                    retourVoitures.put(idVoiture, saExistante.getDateHeureArrivee());
+                }
+            }
+        }
+
+        System.out.println("🔒 " + retourVoitures.size() + " voiture(s) occupée(s) par assignations existantes\n");
+
+        // 5. Regrouper les réservations restantes par vague
+        if (reservationsASimuler.isEmpty()) {
+            System.out.println("ℹ️ Toutes les réservations sont déjà assignées");
+            return resultat;
+        }
+
+        Map<String, List<Reservation>> vagues = regrouperParVague(reservationsASimuler);
+        resultat.setNbVagues(vagues.size());
         List<String> vaguesTriees = new ArrayList<>(vagues.keySet());
         Collections.sort(vaguesTriees);
 
