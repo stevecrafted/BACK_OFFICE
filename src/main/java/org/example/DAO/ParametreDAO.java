@@ -35,4 +35,12 @@ public class ParametreDAO {
         }
         return 60.0; // valeur par défaut
     }
+
+    public int getTempsAttente() {
+        String valeur = getValeur("temps_attente");
+        if (valeur != null) {
+            return Integer.parseInt(valeur);
+        }
+        return 30; // valeur par défaut en minutes
+    }
 }

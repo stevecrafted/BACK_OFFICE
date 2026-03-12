@@ -17,6 +17,9 @@ public class SimulationAssignationService {
     private ParametreDAO parametreDAO = new ParametreDAO();
     private AssignationDAO assignationDAO = new AssignationDAO();
 
+    // Stocke les intervalles [debutFenetre, finFenetre] de chaque vague (clé = cleVague)
+    private Map<String, Timestamp[]> vagueIntervalles = new LinkedHashMap<>();
+
     /**
      * Simule l'assignation des voitures pour une date donnée
      * SANS INSERTION EN BASE - Juste simulation
@@ -24,6 +27,7 @@ public class SimulationAssignationService {
      */
     public ResultatSimulation simulerAssignation(Date dateSimulation) {
         ResultatSimulation resultat = new ResultatSimulation(dateSimulation);
+        vagueIntervalles.clear();
 
         System.out.println("\n========================================");
         System.out.println("🎯 SIMULATION D'ASSIGNATION");
@@ -132,8 +136,9 @@ public class SimulationAssignationService {
             // Trier par nombre de passagers décroissant
             reservationsVague.sort((r1, r2) -> Integer.compare(r2.getNbPassager(), r1.getNbPassager()));
 
-            // Heure de la vague (depuis la première réservation)
-            Timestamp heureVague = reservationsVague.get(0).getDateHeure();
+            // Heure de la vague = heure de la dernière réservation (déjà calculée par regrouperParVague)
+            // On utilise la clé de la vague qui correspond à la dernière réservation
+            Timestamp heureVague = Timestamp.valueOf(cleVague + ":00");
 
             // Filtrer les voitures disponibles : celles qui ne sont pas en trajet à l'heure de la vague
             long heureVagueMs = heureVague.getTime();
@@ -170,7 +175,7 @@ public class SimulationAssignationService {
                     reservation, 
                     voituresDisponibles, 
                     assignationsVague,
-                    reservation.getDateHeure()
+                    heureVague
                 );
 
                 if (assignation != null) {
@@ -183,9 +188,16 @@ public class SimulationAssignationService {
                 }
             }
 
+            // Récupérer l'intervalle de la vague pour l'affichage
+            Timestamp[] intervalleVague = vagueIntervalles.get(cleVague);
+
             // Calculer les heures d'arrivée pour chaque assignation de cette vague
             // Puis vérifier que l'intervalle [départ, arrivée] ne chevauche aucun intervalle existant
             for (SimulationAssignation assignation : assignationsVague.values()) {
+                if (intervalleVague != null) {
+                    assignation.setDebutVague(intervalleVague[0]);
+                    assignation.setFinFenetreVague(intervalleVague[1]);
+                }
                 calculerHeuresTrajet(assignation, aeroport, vitesseMoyenne);
 
                 long departMs = assignation.getDateHeureDepart().getTime();
@@ -406,18 +418,71 @@ public class SimulationAssignationService {
     }
 
     /**
-     * Regroupe les réservations par vague (même date, heure, minute - sans secondes)
+     * Regroupe les réservations par vague selon le temps d'attente.
+     * - La première réservation de la journée ouvre une fenêtre [t, t + temps_attente]
+     * - Toutes les réservations dans cette fenêtre font partie de la même vague
+     * - L'heure de départ de la vague = heure de la dernière réservation dans la fenêtre
+     * - La vague suivante commence à la première réservation APRÈS la fin de la fenêtre (strictement après)
+     * La clé de chaque vague est le timestamp de la dernière réservation (= heure de départ)
      */
     private Map<String, List<Reservation>> regrouperParVague(List<Reservation> reservations) {
-        Map<String, List<Reservation>> vagues = new TreeMap<>();
+        int tempsAttenteMinutes = parametreDAO.getTempsAttente();
+        long tempsAttenteMs = tempsAttenteMinutes * 60L * 1000L;
 
-        for (Reservation reservation : reservations) {
-            Timestamp heure = reservation.getDateHeure();
+        // Trier toutes les réservations par date_heure croissante
+        List<Reservation> triees = new ArrayList<>(reservations);
+        triees.sort((r1, r2) -> r1.getDateHeure().compareTo(r2.getDateHeure()));
+
+        Map<String, List<Reservation>> vagues = new LinkedHashMap<>();
+        int i = 0;
+
+        while (i < triees.size()) {
+            // La première réservation ouvre la fenêtre
+            Timestamp debutFenetre = triees.get(i).getDateHeure();
             // Tronquer aux minutes (ignorer les secondes)
-            String cleVague = String.format("%tF %tH:%tM", heure, heure, heure);
-            vagues.computeIfAbsent(cleVague, k -> new ArrayList<>()).add(reservation);
+            long debutMs = tronquerAuxMinutes(debutFenetre);
+            long finFenetreMs = debutMs + tempsAttenteMs;
+
+            // Collecter toutes les réservations dans [debutMs, finFenetreMs] (inclus)
+            List<Reservation> vagueReservations = new ArrayList<>();
+            Timestamp derniereHeure = debutFenetre;
+
+            while (i < triees.size()) {
+                Timestamp heureCourante = triees.get(i).getDateHeure();
+                long heureCourtanteMs = tronquerAuxMinutes(heureCourante);
+
+                if (heureCourtanteMs <= finFenetreMs) {
+                    vagueReservations.add(triees.get(i));
+                    if (heureCourante.after(derniereHeure)) {
+                        derniereHeure = heureCourante;
+                    }
+                    i++;
+                } else {
+                    break;
+                }
+            }
+
+            // La clé de la vague = heure de la dernière réservation (= heure de départ de la vague)
+            String cleVague = String.format("%tF %tH:%tM", derniereHeure, derniereHeure, derniereHeure);
+            vagues.put(cleVague, vagueReservations);
+
+            // Stocker l'intervalle de la vague [début fenêtre, fin fenêtre]
+            Timestamp tsDebut = new Timestamp(debutMs);
+            Timestamp tsFin = new Timestamp(finFenetreMs);
+            vagueIntervalles.put(cleVague, new Timestamp[]{tsDebut, tsFin});
         }
 
         return vagues;
+    }
+
+    /**
+     * Tronque un Timestamp aux minutes (met les secondes et millisecondes à 0)
+     */
+    private long tronquerAuxMinutes(Timestamp ts) {
+        Calendar cal = Calendar.getInstance();
+        cal.setTimeInMillis(ts.getTime());
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        return cal.getTimeInMillis();
     }
 }

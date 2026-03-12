@@ -14,6 +14,8 @@ public class SimulationAssignation {
     private Timestamp heureVague;
     private Timestamp dateHeureDepart;
     private Timestamp dateHeureArrivee;
+    private Timestamp debutVague;
+    private Timestamp finFenetreVague;
     private List<EtapeItineraire> itineraire = new ArrayList<>();
 
     public SimulationAssignation(Voiture voiture, Timestamp heureVague) {
@@ -48,6 +50,12 @@ public class SimulationAssignation {
 
     public Timestamp getDateHeureArrivee() { return dateHeureArrivee; }
     public void setDateHeureArrivee(Timestamp dateHeureArrivee) { this.dateHeureArrivee = dateHeureArrivee; }
+
+    public Timestamp getDebutVague() { return debutVague; }
+    public void setDebutVague(Timestamp debutVague) { this.debutVague = debutVague; }
+
+    public Timestamp getFinFenetreVague() { return finFenetreVague; }
+    public void setFinFenetreVague(Timestamp finFenetreVague) { this.finFenetreVague = finFenetreVague; }
 
     public List<EtapeItineraire> getItineraire() { return itineraire; }
     public void setItineraire(List<EtapeItineraire> itineraire) { this.itineraire = itineraire; }
