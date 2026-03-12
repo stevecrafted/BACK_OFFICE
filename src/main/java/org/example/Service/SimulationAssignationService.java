@@ -69,8 +69,9 @@ public class SimulationAssignationService {
         double vitesseMoyenne = parametreDAO.getVM();
         Lieu aeroport = lieuDAO.findAeroport();
 
-        // 4. Construire les assignations existantes pour affichage et pré-remplir retourVoitures
-        Map<Integer, Timestamp> retourVoitures = new HashMap<>();
+        // 4. Construire les assignations existantes pour affichage et pré-remplir les intervalles occupés
+        // Chaque voiture a une liste d'intervalles [departMs, arriveeMs] pendant lesquels elle est occupée
+        Map<Integer, List<long[]>> intervallesOccupes = new HashMap<>();
 
         for (Map.Entry<Integer, List<Reservation>> entry : voitureReservationsExistantes.entrySet()) {
             int idVoiture = entry.getKey();
@@ -101,15 +102,13 @@ public class SimulationAssignationService {
                 calculerHeuresTrajet(saExistante, aeroport, vitesseMoyenne);
                 resultat.ajouterAssignationExistante(saExistante);
 
-                // Pré-remplir retourVoitures avec l'heure de retour la plus tardive
-                Timestamp retourExistant = retourVoitures.get(idVoiture);
-                if (retourExistant == null || saExistante.getDateHeureArrivee().getTime() > retourExistant.getTime()) {
-                    retourVoitures.put(idVoiture, saExistante.getDateHeureArrivee());
-                }
+                // Enregistrer l'intervalle occupé [départ, arrivée]
+                intervallesOccupes.computeIfAbsent(idVoiture, k -> new ArrayList<>())
+                    .add(new long[]{saExistante.getDateHeureDepart().getTime(), saExistante.getDateHeureArrivee().getTime()});
             }
         }
 
-        System.out.println("🔒 " + retourVoitures.size() + " voiture(s) occupée(s) par assignations existantes\n");
+        System.out.println("🔒 " + intervallesOccupes.size() + " voiture(s) avec des intervalles occupés\n");
 
         // 5. Regrouper les réservations restantes par vague
         if (reservationsASimuler.isEmpty()) {
@@ -136,15 +135,25 @@ public class SimulationAssignationService {
             // Heure de la vague (depuis la première réservation)
             Timestamp heureVague = reservationsVague.get(0).getDateHeure();
 
-            // Filtrer les voitures disponibles : seulement celles revenues avant cette vague
+            // Filtrer les voitures disponibles : celles qui ne sont pas en trajet à l'heure de la vague
+            long heureVagueMs = heureVague.getTime();
             List<Voiture> voituresDisponibles = new ArrayList<>();
             for (Voiture v : toutesVoitures) {
-                Timestamp retour = retourVoitures.get(v.getIdVoiture());
-                if (retour == null || retour.getTime() <= heureVague.getTime()) {
+                List<long[]> intervals = intervallesOccupes.get(v.getIdVoiture());
+                boolean disponible = true;
+                if (intervals != null) {
+                    for (long[] interval : intervals) {
+                        // La voiture est occupée si l'heure de la vague tombe dans un intervalle [départ, arrivée[
+                        if (heureVagueMs >= interval[0] && heureVagueMs < interval[1]) {
+                            disponible = false;
+                            System.out.println("   🚫 Voiture #" + v.getIdVoiture() + " (" + v.getRef() + 
+                                               ") en trajet de " + new Timestamp(interval[0]) + " à " + new Timestamp(interval[1]));
+                            break;
+                        }
+                    }
+                }
+                if (disponible) {
                     voituresDisponibles.add(v);
-                } else {
-                    System.out.println("   🚫 Voiture #" + v.getIdVoiture() + " (" + v.getRef() + 
-                                       ") indisponible - retour prévu à " + retour);
                 }
             }
 
@@ -175,12 +184,42 @@ public class SimulationAssignationService {
             }
 
             // Calculer les heures d'arrivée pour chaque assignation de cette vague
-            // et mettre à jour l'heure de retour de chaque voiture
+            // Puis vérifier que l'intervalle [départ, arrivée] ne chevauche aucun intervalle existant
             for (SimulationAssignation assignation : assignationsVague.values()) {
                 calculerHeuresTrajet(assignation, aeroport, vitesseMoyenne);
-                resultat.ajouterAssignation(assignation);
-                // Enregistrer l'heure de retour (= heure d'arrivée à l'aéroport)
-                retourVoitures.put(assignation.getVoiture().getIdVoiture(), assignation.getDateHeureArrivee());
+
+                long departMs = assignation.getDateHeureDepart().getTime();
+                long arriveeMs = assignation.getDateHeureArrivee().getTime();
+                int idVoitureAssignee = assignation.getVoiture().getIdVoiture();
+
+                // Vérifier chevauchement avec les intervalles existants
+                boolean chevauchement = false;
+                List<long[]> intervals = intervallesOccupes.get(idVoitureAssignee);
+                if (intervals != null) {
+                    for (long[] interval : intervals) {
+                        // Deux intervalles [A,B] et [C,D] se chevauchent si A < D && C < B
+                        if (departMs < interval[1] && interval[0] < arriveeMs) {
+                            chevauchement = true;
+                            System.out.println("   ⚠️ Voiture #" + idVoitureAssignee + 
+                                " chevauchement détecté: trajet [" + assignation.getDateHeureDepart() + 
+                                " - " + assignation.getDateHeureArrivee() + 
+                                "] chevauche [" + new Timestamp(interval[0]) + " - " + new Timestamp(interval[1]) + "]");
+                            break;
+                        }
+                    }
+                }
+
+                if (chevauchement) {
+                    // Déplacer toutes les réservations vers non-assignées
+                    for (Reservation r : assignation.getReservations()) {
+                        resultat.ajouterReservationNonAssignee(r);
+                    }
+                } else {
+                    resultat.ajouterAssignation(assignation);
+                    // Enregistrer le nouvel intervalle occupé
+                    intervallesOccupes.computeIfAbsent(idVoitureAssignee, k -> new ArrayList<>())
+                        .add(new long[]{departMs, arriveeMs});
+                }
             }
 
             numeroVague++;

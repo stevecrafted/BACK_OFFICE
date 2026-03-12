@@ -277,6 +277,19 @@
             <% if (resultat.getAssignationsExistantes() != null && !resultat.getAssignationsExistantes().isEmpty()) { %>
                 <div class="existing-section">
                     <h2>🔒 Assignations déjà enregistrées en base</h2>
+
+                    <form method="POST" action="/assignations/supprimer-selection" id="formSupprimer">
+                        <input type="hidden" name="date" value="<%= dateSimulation %>">
+                        <input type="hidden" name="deleteSelections" id="deleteSelectionsInput" value="">
+
+                        <div style="margin: 10px 0; text-align: center;">
+                            <button type="submit" class="btn-danger" 
+                                    onclick="return preparerSuppression()"
+                                    style="background-color: #f44336; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">
+                                🗑️ Supprimer les sélections
+                            </button>
+                        </div>
+
                     <%
                         LieuDAO lieuDAOEx = new LieuDAO();
                         SimpleDateFormat sdfEx = new SimpleDateFormat("dd/MM/yyyy HH:mm");
@@ -293,10 +306,15 @@
                     %>
                         <div class="vague-header" style="background-color: #388e3c;">
                             <span>🔒 VAGUE EXISTANTE #<%= numVagueEx %> - <%= entryEx.getKey() %></span>
+                            <label>
+                                <input type="checkbox" class="cb-vague-ex" data-vague-ex="<%= numVagueEx %>" 
+                                       onchange="toggleVagueEx(<%= numVagueEx %>)"> Tout sélectionner
+                            </label>
                         </div>
                         <table>
                             <thead>
                                 <tr>
+                                    <th style="width: 40px;">✔</th>
                                     <th>Voiture</th>
                                     <th>Référence</th>
                                     <th>Capacité</th>
@@ -313,11 +331,20 @@
                             <% for (SimulationAssignation saEx : entryEx.getValue()) {
                                 Voiture vEx = saEx.getVoiture();
                                 int totalPEx = 0;
-                                for (Reservation rEx : saEx.getReservations()) {
+                                StringBuilder dataDeleteSelections = new StringBuilder();
+                                for (int iEx = 0; iEx < saEx.getReservations().size(); iEx++) {
+                                    Reservation rEx = saEx.getReservations().get(iEx);
                                     totalPEx += rEx.getNbPassager();
+                                    if (iEx > 0) dataDeleteSelections.append(",");
+                                    dataDeleteSelections.append(rEx.getId());
                                 }
                             %>
                                 <tr>
+                                    <td>
+                                        <input type="checkbox" class="cb-line-ex cb-vague-ex-<%= numVagueEx %>" 
+                                               data-delete-selections="<%= dataDeleteSelections.toString() %>"
+                                               data-vague-ex="<%= numVagueEx %>">
+                                    </td>
                                     <td>#<%= vEx.getIdVoiture() %></td>
                                     <td><strong><%= vEx.getRef() %></strong></td>
                                     <td><%= vEx.getCapacite() %> places</td>
@@ -364,6 +391,7 @@
                         numVagueEx++;
                         }
                     %>
+                    </form>
                 </div>
             <% } %>
 
@@ -558,7 +586,8 @@
     </div>
 
     <script>
-        // Toggle tous les checkboxes d'une vague
+        // ==================== SIMULATION CHECKBOXES ====================
+        // Toggle tous les checkboxes d'une vague (simulation)
         function toggleVague(numVague) {
             var cbVague = document.querySelector('.cb-vague[data-vague="' + numVague + '"]');
             var checkboxes = document.querySelectorAll('.cb-vague-' + numVague);
@@ -584,7 +613,7 @@
             }
         });
 
-        // Préparer les données avant soumission
+        // Préparer les données avant soumission (confirmation)
         function preparerConfirmation() {
             var checkboxes = document.querySelectorAll('.cb-line:checked');
             if (checkboxes.length === 0) {
@@ -608,6 +637,59 @@
             }
             
             return confirm('Confirmer l\'enregistrement de ' + nbTotal + ' assignation(s) sélectionnée(s) ?');
+        }
+
+        // ==================== EXISTING ASSIGNATIONS CHECKBOXES ====================
+        // Toggle tous les checkboxes d'une vague existante
+        function toggleVagueEx(numVague) {
+            var cbVague = document.querySelector('.cb-vague-ex[data-vague-ex="' + numVague + '"]');
+            var checkboxes = document.querySelectorAll('.cb-vague-ex-' + numVague);
+            for (var i = 0; i < checkboxes.length; i++) {
+                checkboxes[i].checked = cbVague.checked;
+            }
+        }
+
+        // Mettre à jour le checkbox de la vague existante
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('cb-line-ex')) {
+                var numVague = e.target.getAttribute('data-vague-ex');
+                var checkboxes = document.querySelectorAll('.cb-vague-ex-' + numVague);
+                var allChecked = true;
+                for (var i = 0; i < checkboxes.length; i++) {
+                    if (!checkboxes[i].checked) {
+                        allChecked = false;
+                        break;
+                    }
+                }
+                var cbVague = document.querySelector('.cb-vague-ex[data-vague-ex="' + numVague + '"]');
+                if (cbVague) cbVague.checked = allChecked;
+            }
+        });
+
+        // Préparer les données avant suppression
+        function preparerSuppression() {
+            var checkboxes = document.querySelectorAll('.cb-line-ex:checked');
+            if (checkboxes.length === 0) {
+                alert('Veuillez sélectionner au moins une assignation à supprimer.');
+                return false;
+            }
+
+            var selections = [];
+            for (var i = 0; i < checkboxes.length; i++) {
+                var data = checkboxes[i].getAttribute('data-delete-selections');
+                if (data) {
+                    selections.push(data);
+                }
+            }
+
+            document.getElementById('deleteSelectionsInput').value = selections.join(',');
+            
+            var nbTotal = 0;
+            for (var j = 0; j < selections.length; j++) {
+                nbTotal += selections[j].split(',').length;
+            }
+            
+            return confirm('Supprimer ' + nbTotal + ' assignation(s) sélectionnée(s) ?');
         }
     </script>
 </body>
