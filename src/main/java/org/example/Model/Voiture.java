@@ -4,12 +4,12 @@ public class Voiture {
     private int idVoiture;
     private int capacite;
     private String ref;
-    private Carburant carburant;
+    private String carburant; // E=Essence, H=Hybride, D=Diesel
 
     // Constructeurs
     public Voiture() {}
 
-    public Voiture(int capacite, String ref, Carburant carburant) {
+    public Voiture(int capacite, String ref, String carburant) {
         this.capacite = capacite;
         this.ref = ref;
         this.carburant = carburant;
@@ -25,8 +25,18 @@ public class Voiture {
     public String getRef() { return ref; }
     public void setRef(String ref) { this.ref = ref; }
 
-    public Carburant getCarburant() { return carburant; }
-    public void setCarburant(Carburant carburant) { this.carburant = carburant; }
+    public String getCarburant() { return carburant; }
+    public void setCarburant(String carburant) { this.carburant = carburant; }
+
+    public String getCarburantLibelle() {
+        if (carburant == null) return "";
+        switch (carburant) {
+            case "D": return "Diesel";
+            case "H": return "Hybride";
+            case "E": return "Essence";
+            default: return carburant;
+        }
+    }
 
     @Override
     public String toString() {
@@ -34,7 +44,7 @@ public class Voiture {
                 "idVoiture=" + idVoiture +
                 ", capacite=" + capacite +
                 ", ref='" + ref + '\'' +
-                ", carburant=" + carburant +
+                ", carburant='" + carburant + '\'' +
                 '}';
     }
 }

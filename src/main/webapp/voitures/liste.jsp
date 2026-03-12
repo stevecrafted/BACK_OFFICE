@@ -58,21 +58,8 @@
         <div class="message error"><%= error %></div>
     <% } %>
 
-    <!-- Filtre par date de départ -->
-    <div class="filter-section">
-        <form method="GET" action="/voitures" style="display: inline;">
-            <label for="dateDepart">📅 Filtrer par date de départ :</label>
-            <input type="date" id="dateDepart" name="dateDepart" 
-                   value="<%= request.getAttribute("dateDepart") != null ? request.getAttribute("dateDepart") : "" %>">
-            <button type="submit" class="btn btn-primary">🔍 Filtrer</button>
-        </form>
-        <% if (request.getAttribute("dateDepart") != null) { %>
-            <a href="/voitures" class="btn btn-secondary">✖ Réinitialiser</a>
-        <% } %>
-    </div>
-
-    <a href="/voitures/nouveau" class="btn btn-primary">➕ Nouvelle Voiture</a>
-    <a href="/api/voitures" class="btn btn-info">📊 API JSON</a>
+    <a href="/voitures/nouveau" class="btn btn-primary">Nouvelle Voiture</a>
+    <a href="/api/voitures" class="btn btn-info">API JSON</a>
 
     <% 
         List<Voiture> voitures = (List<Voiture>) request.getAttribute("voitures");
@@ -94,7 +81,7 @@
                         <td><%= v.getIdVoiture() %></td>
                         <td><strong><%= v.getRef() %></strong></td>
                         <td><%= v.getCapacite() %> places</td>
-                        <td><%= v.getCarburant() != null ? v.getCarburant().getLibelle() : "N/A" %></td>
+                        <td><%= v.getCarburantLibelle() %></td>
                         <td>
                             <a href="/voitures/details?id=<%= v.getIdVoiture() %>" class="btn btn-info">👁️</a>
                             <a href="/voitures/edit?id=<%= v.getIdVoiture() %>" class="btn btn-warning">✏️</a>

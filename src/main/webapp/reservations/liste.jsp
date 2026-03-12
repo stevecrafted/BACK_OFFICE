@@ -150,7 +150,7 @@
                         <th>ID</th>
                         <th>Client</th>
                         <th>Passagers</th>
-                        <th>Hotel</th>
+                        <th>Lieu</th>
                         <th>Date/Heure</th>
                         <th>Statut</th>
                         <th>Actions</th>
@@ -160,7 +160,7 @@
                     <%
                         for (Map<String, Object> detail : reservations) {
                             Reservation reservation = (Reservation) detail.get("reservation");
-                            Hotel hotel = (Hotel) detail.get("hotel");
+                            Lieu lieu = (Lieu) detail.get("lieu");
                             boolean estAssignee = (Boolean) detail.get("estAssignee");
                     %>
                         <tr>
@@ -168,11 +168,11 @@
                             <td><strong><%= reservation.getIdClient() %></strong></td>
                             <td><span class="badge badge-success"><%= reservation.getNbPassager() %> pers.</span></td>
                             <td>
-                                <% if (hotel != null) { %>
-                                    <%= hotel.getNom() %><br>
-                                    <small>ID: <%= hotel.getId() %></small>
+                                <% if (lieu != null) { %>
+                                    <%= lieu.getLibelle() %><br>
+                                    <small><%= lieu.getCode() %></small>
                                 <% } else { %>
-                                    Hotel #<%= reservation.getIdHotel() %>
+                                    Lieu #<%= reservation.getIdLieu() %>
                                 <% } %>
                             </td>
                             <td><%= reservation.getDateHeure() %></td>

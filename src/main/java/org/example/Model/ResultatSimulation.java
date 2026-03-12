@@ -11,12 +11,14 @@ public class ResultatSimulation {
     private Date dateSimulation;
     private List<SimulationAssignation> assignations;
     private List<Reservation> reservationsNonAssignees;
+    private List<SimulationAssignation> assignationsExistantes;
     private int nbVagues;
 
     public ResultatSimulation(Date dateSimulation) {
         this.dateSimulation = dateSimulation;
         this.assignations = new ArrayList<>();
         this.reservationsNonAssignees = new ArrayList<>();
+        this.assignationsExistantes = new ArrayList<>();
         this.nbVagues = 0;
     }
 
@@ -28,10 +30,15 @@ public class ResultatSimulation {
         reservationsNonAssignees.add(reservation);
     }
 
+    public void ajouterAssignationExistante(SimulationAssignation assignation) {
+        assignationsExistantes.add(assignation);
+    }
+
     // Getters et Setters
     public Date getDateSimulation() { return dateSimulation; }
     public List<SimulationAssignation> getAssignations() { return assignations; }
     public List<Reservation> getReservationsNonAssignees() { return reservationsNonAssignees; }
+    public List<SimulationAssignation> getAssignationsExistantes() { return assignationsExistantes; }
     public int getNbVagues() { return nbVagues; }
     public void setNbVagues(int nbVagues) { this.nbVagues = nbVagues; }
     

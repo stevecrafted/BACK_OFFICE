@@ -131,6 +131,50 @@ public class AssignationController {
     }
 
     /**
+     * Supprimer les assignations sélectionnées (depuis la page simulation)
+     */
+    @PostMapping("/assignations/supprimer-selection")
+    public ModelView supprimerAssignationsSelection(
+            @AnnotationRequestParam("date") String dateStr,
+            @AnnotationRequestParam("deleteSelections") String deleteSelections) {
+        ModelView mv = new ModelView();
+
+        try {
+            int nbSuppressions = 0;
+
+            // deleteSelections = "idReservation1,idReservation2,..."
+            if (deleteSelections != null && !deleteSelections.isEmpty()) {
+                String[] ids = deleteSelections.split(",");
+                for (String idStr : ids) {
+                    int idReservation = Integer.parseInt(idStr.trim());
+                    Assignation assignation = assignationDAO.findByReservation(idReservation);
+                    if (assignation != null) {
+                        if (assignationDAO.delete(assignation.getId())) {
+                            nbSuppressions++;
+                        }
+                    }
+                }
+            }
+
+            // Re-lancer la simulation pour afficher l'état mis à jour
+            Date dateSimulation = Date.valueOf(dateStr);
+            ResultatSimulation resultat = simulationService.simulerAssignation(dateSimulation);
+
+            mv.setView("assignations/simulation.jsp");
+            mv.addAttribute("resultat", resultat);
+            mv.addAttribute("dateSimulation", dateStr);
+            mv.addAttribute("message", nbSuppressions + " assignation(s) supprimée(s)");
+
+        } catch (Exception e) {
+            mv.setView("redirect:/assignations/simuler");
+            mv.addAttribute("error", "Erreur lors de la suppression : " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return mv;
+    }
+
+    /**
      * Afficher le formulaire de simulation
      */
     @GetMapping("/assignations/simuler")
@@ -182,34 +226,47 @@ public class AssignationController {
     }
 
     /**
-     * Confirmer et enregistrer la simulation en base de données
+     * Confirmer et enregistrer les assignations sélectionnées
      */
     @PostMapping("/assignations/confirmer")
-    public ModelView confirmerSimulation(@AnnotationRequestParam("date") String dateStr) {
+    public ModelView confirmerSimulation(
+            @AnnotationRequestParam("date") String dateStr,
+            @AnnotationRequestParam("selections") String selections) {
         ModelView mv = new ModelView();
 
         try {
-            Date dateSimulation = Date.valueOf(dateStr);
-            ResultatSimulation resultat = simulationService.simulerAssignation(dateSimulation);
-            
             int nbAssignations = 0;
             
-            // Enregistrer chaque assignation en base
-            for (SimulationAssignation simAssignation : resultat.getAssignations()) {
-                for (Reservation reservation : simAssignation.getReservations()) {
-                    Assignation assignation = new Assignation();
-                    assignation.setIdReservation(reservation.getId());
-                    assignation.setIdVoiture(simAssignation.getVoiture().getIdVoiture());
-                    
-                    if (assignationDAO.create(assignation)) {
-                        // Mettre à jour la réservation avec l'ID de la voiture
-                        reservationDAO.assignVoiture(reservation.getId(), simAssignation.getVoiture().getIdVoiture());
-                        nbAssignations++;
+            // selections = "idVoiture:idReservation,idVoiture:idReservation,..."
+            if (selections != null && !selections.isEmpty()) {
+                String[] paires = selections.split(",");
+                for (String paire : paires) {
+                    String[] parts = paire.split(":");
+                    if (parts.length == 2) {
+                        int idVoiture = Integer.parseInt(parts[0].trim());
+                        int idReservation = Integer.parseInt(parts[1].trim());
+                        
+                        // Vérifier que cette réservation n'est pas déjà assignée
+                        if (assignationDAO.findByReservation(idReservation) == null) {
+                            Assignation assignation = new Assignation();
+                            assignation.setIdVoiture(idVoiture);
+                            assignation.setIdReservation(idReservation);
+                            
+                            if (assignationDAO.create(assignation)) {
+                                nbAssignations++;
+                            }
+                        }
                     }
                 }
             }
             
-            mv.setView("redirect:/assignations");
+            // Re-lancer la simulation pour afficher l'état mis à jour
+            Date dateSimulation = Date.valueOf(dateStr);
+            ResultatSimulation resultat = simulationService.simulerAssignation(dateSimulation);
+            
+            mv.setView("assignations/simulation.jsp");
+            mv.addAttribute("resultat", resultat);
+            mv.addAttribute("dateSimulation", dateStr);
             mv.addAttribute("message", nbAssignations + " assignation(s) confirmée(s) et enregistrée(s)");
             
         } catch (Exception e) {

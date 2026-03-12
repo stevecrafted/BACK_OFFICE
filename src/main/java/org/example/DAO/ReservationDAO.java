@@ -11,12 +11,12 @@ public class ReservationDAO {
 
     // CREATE
     public boolean create(Reservation reservation) {
-        String sql = "INSERT INTO reservations (id_hotel, id_client, nbPassager, date_heure) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure) VALUES (?, ?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-            stmt.setInt(1, reservation.getIdHotel());
+            stmt.setInt(1, reservation.getIdLieu());
             stmt.setString(2, reservation.getIdClient());
             stmt.setInt(3, reservation.getNbPassager());
 
@@ -91,12 +91,12 @@ public class ReservationDAO {
 
     // UPDATE
     public boolean update(Reservation reservation) {
-        String sql = "UPDATE reservations SET id_hotel = ?, id_client = ?, nbPassager = ?, date_heure = ? WHERE id = ?";
+        String sql = "UPDATE reservations SET id_lieu = ?, id_client = ?, nbPassager = ?, date_heure = ? WHERE id = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setInt(1, reservation.getIdHotel());
+            stmt.setInt(1, reservation.getIdLieu());
             stmt.setString(2, reservation.getIdClient());
             stmt.setInt(3, reservation.getNbPassager());
             stmt.setTimestamp(4, reservation.getDateHeure());
@@ -166,15 +166,15 @@ public class ReservationDAO {
         return reservations;
     }
 
-    // READ BY HOTEL
-    public List<Reservation> findByHotel(int idHotel) {
+    // READ BY LIEU
+    public List<Reservation> findByLieu(int idLieu) {
         List<Reservation> reservations = new ArrayList<>();
-        String sql = "SELECT * FROM reservations WHERE id_hotel = ? ORDER BY date_heure DESC";
+        String sql = "SELECT * FROM reservations WHERE id_lieu = ? ORDER BY date_heure DESC";
 
         try (Connection conn = DatabaseConnection.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setInt(1, idHotel);
+            stmt.setInt(1, idLieu);
 
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
@@ -182,7 +182,7 @@ public class ReservationDAO {
                 }
             }
 
-            System.out.println("✅ " + reservations.size() + " réservation(s) trouvée(s) pour l'hotel ID : " + idHotel);
+            System.out.println("✅ " + reservations.size() + " réservation(s) trouvée(s) pour le lieu ID : " + idLieu);
 
         } catch (SQLException e) {
             System.err.println("❌ Erreur lors de la recherche par hotel : " + e.getMessage());
@@ -222,7 +222,7 @@ public class ReservationDAO {
     private Reservation mapResultSetToReservation(ResultSet rs) throws SQLException {
         Reservation reservation = new Reservation();
         reservation.setId(rs.getInt("id"));
-        reservation.setIdHotel(rs.getInt("id_hotel"));
+        reservation.setIdLieu(rs.getInt("id_lieu"));
         reservation.setIdClient(rs.getString("id_client"));
         reservation.setNbPassager(rs.getInt("nbPassager"));
         reservation.setDateHeure(rs.getTimestamp("date_heure"));
@@ -231,28 +231,4 @@ public class ReservationDAO {
         return reservation;
     }
 
-    // ASSIGNER UNE VOITURE A UNE RESERVATION
-    public boolean assignVoiture(int idReservation, int idVoiture) {
-        String sql = "UPDATE reservations SET idVoiture = ? WHERE id = ?";
-
-        try (Connection conn = DatabaseConnection.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, idVoiture);
-            stmt.setInt(2, idReservation);
-
-            int rowsAffected = stmt.executeUpdate();
-
-            if (rowsAffected > 0) {
-                System.out.println("✅ Voiture " + idVoiture + " assignée à la réservation " + idReservation);
-                return true;
-            }
-
-        } catch (SQLException e) {
-            System.err.println("❌ Erreur lors de l'assignation de voiture : " + e.getMessage());
-            e.printStackTrace();
-        }
-
-        return false;
-    }
 }

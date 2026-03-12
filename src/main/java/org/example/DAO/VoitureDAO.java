@@ -1,7 +1,6 @@
 package org.example.DAO;
 
 import org.example.Model.Voiture;
-import org.example.Model.Carburant;
 import org.example.Util.DatabaseConnection;
 
 import java.sql.*;
@@ -12,15 +11,14 @@ public class VoitureDAO {
 
     // CREATE
     public boolean create(Voiture voiture) {
-        String sql = "INSERT INTO Voiture (Capacite, ref_, idCarburant) VALUES (?, ?, ?)";
+        String sql = "INSERT INTO Voiture (Capacite, ref_, carburant) VALUES (?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             stmt.setInt(1, voiture.getCapacite());
-            // Le ref sera mis à jour après avoir récupéré l'ID
-            stmt.setString(2, "TEMP"); // Valeur temporaire
-            stmt.setInt(3, voiture.getCarburant().getIdCarburant());
+            stmt.setString(2, "TEMP");
+            stmt.setString(3, voiture.getCarburant());
 
             int rowsAffected = stmt.executeUpdate();
 
@@ -29,12 +27,10 @@ public class VoitureDAO {
                     if (rs.next()) {
                         int generatedId = rs.getInt(1);
                         voiture.setIdVoiture(generatedId);
-                        
-                        // Générer le ref basé sur l'ID: VOI0001, VOI0012, etc.
+
                         String ref = String.format("VOI%04d", generatedId);
                         voiture.setRef(ref);
-                        
-                        // Mettre à jour le ref dans la base
+
                         String updateSql = "UPDATE Voiture SET ref_ = ? WHERE idVoiture = ?";
                         try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
                             updateStmt.setString(1, ref);
@@ -104,14 +100,14 @@ public class VoitureDAO {
     }
 
     // READ BY CARBURANT
-    public List<Voiture> findByCarburant(int idCarburant) {
+    public List<Voiture> findByCarburant(String carburant) {
         List<Voiture> voitures = new ArrayList<>();
-        String sql = "SELECT * FROM Voiture WHERE idCarburant = ? ORDER BY ref_";
+        String sql = "SELECT * FROM Voiture WHERE carburant = ? ORDER BY ref_";
 
         try (Connection conn = DatabaseConnection.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setInt(1, idCarburant);
+            stmt.setString(1, carburant);
 
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
@@ -119,7 +115,7 @@ public class VoitureDAO {
                 }
             }
 
-            System.out.println("✅ " + voitures.size() + " voiture(s) trouvée(s) pour le carburant : " + idCarburant);
+            System.out.println("✅ " + voitures.size() + " voiture(s) trouvée(s) pour le carburant : " + carburant);
 
         } catch (SQLException e) {
             System.err.println("❌ Erreur lors de la recherche par carburant : " + e.getMessage());
@@ -156,14 +152,14 @@ public class VoitureDAO {
 
     // UPDATE
     public boolean update(Voiture voiture) {
-        String sql = "UPDATE Voiture SET Capacite = ?, ref_ = ?, idCarburant = ? WHERE idVoiture = ?";
+        String sql = "UPDATE Voiture SET Capacite = ?, ref_ = ?, carburant = ? WHERE idVoiture = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, voiture.getCapacite());
             stmt.setString(2, voiture.getRef());
-            stmt.setInt(3, voiture.getCarburant().getIdCarburant());
+            stmt.setString(3, voiture.getCarburant());
             stmt.setInt(4, voiture.getIdVoiture());
 
             int rowsAffected = stmt.executeUpdate();
@@ -210,42 +206,7 @@ public class VoitureDAO {
         voiture.setIdVoiture(rs.getInt("idVoiture"));
         voiture.setCapacite(rs.getInt("Capacite"));
         voiture.setRef(rs.getString("ref_"));
-        
-        // Récupérer l'objet Carburant complet
-        int idCarburant = rs.getInt("idCarburant");
-        CarburantDAO carburantDAO = new CarburantDAO();
-        Carburant carburant = carburantDAO.findById(idCarburant);
-        voiture.setCarburant(carburant);
-        
+        voiture.setCarburant(rs.getString("carburant").trim());
         return voiture;
-    }
-
-    // FIND VOITURES BY DATE DE DEPART (via reservations.date_heure et reservations.idVoiture)
-    public List<Voiture> findByDateDepart(java.sql.Date date) {
-        List<Voiture> voitures = new ArrayList<>();
-        String sql = "SELECT DISTINCT v.* FROM Voiture v " +
-                     "INNER JOIN reservations r ON r.idVoiture = v.idVoiture " +
-                     "WHERE DATE(r.date_heure) = ? " +
-                     "ORDER BY v.idVoiture";
-
-        try (Connection conn = DatabaseConnection.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setDate(1, date);
-
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    voitures.add(mapResultSetToVoiture(rs));
-                }
-            }
-
-            System.out.println("✅ " + voitures.size() + " voiture(s) avec départ le " + date);
-
-        } catch (SQLException e) {
-            System.err.println("❌ Erreur lors de la recherche par date de départ : " + e.getMessage());
-            e.printStackTrace();
-        }
-
-        return voitures;
     }
 }

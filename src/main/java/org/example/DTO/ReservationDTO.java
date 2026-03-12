@@ -5,7 +5,7 @@ import java.text.SimpleDateFormat;
 
 public class ReservationDTO {
     private int id;
-    private int idHotel;
+    private int idLieu;
     private String idClient;
     private int nbPassager;
     private String dateHeure; // Format String au lieu de Timestamp
@@ -14,9 +14,9 @@ public class ReservationDTO {
     // Constructeurs
     public ReservationDTO() {}
 
-    public ReservationDTO(int id, int idHotel, String idClient, int nbPassager, Timestamp dateHeure) {
+    public ReservationDTO(int id, int idLieu, String idClient, int nbPassager, Timestamp dateHeure) {
         this.id = id;
-        this.idHotel = idHotel;
+        this.idLieu = idLieu;
         this.idClient = idClient;
         this.nbPassager = nbPassager;
         
@@ -41,8 +41,8 @@ public class ReservationDTO {
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
 
-    public int getIdHotel() { return idHotel; }
-    public void setIdHotel(int idHotel) { this.idHotel = idHotel; }
+    public int getIdLieu() { return idLieu; }
+    public void setIdLieu(int idLieu) { this.idLieu = idLieu; }
 
     public String getIdClient() { return idClient; }
     public void setIdClient(String idClient) { this.idClient = idClient; }
@@ -62,7 +62,7 @@ public class ReservationDTO {
     public String toString() {
         return "ReservationDTO{" +
                 "id=" + id +
-                ", idHotel=" + idHotel +
+                ", idHotel=" + idLieu +
                 ", idClient='" + idClient + '\'' +
                 ", nbPassager=" + nbPassager +
                 ", dateHeure='" + dateHeure + '\'' +

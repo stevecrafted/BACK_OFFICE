@@ -56,7 +56,7 @@ public class ReservationService {
         
         return new ReservationDTO(
             reservation.getId(),
-            reservation.getIdHotel(),
+            reservation.getIdLieu(),
             reservation.getIdClient(),
             reservation.getNbPassager(),
             reservation.getDateHeure()

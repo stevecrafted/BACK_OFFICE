@@ -1,7 +1,5 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ page import="java.util.List" %>
 <%@ page import="org.example.Model.Voiture" %>
-<%@ page import="org.example.Model.Carburant" %>
 <!DOCTYPE html>
 <html>
 <head>
@@ -33,7 +31,7 @@
     </style>
 </head>
 <body>
-    <h1><%= "create".equals(request.getAttribute("action")) ? "🚗 Nouvelle Voiture" : "✏️ Modifier Voiture" %></h1>
+    <h1><%= "create".equals(request.getAttribute("action")) ? "Nouvelle Voiture" : "Modifier Voiture" %></h1>
 
     <% String error = (String) request.getAttribute("error"); %>
     <% if (error != null) { %>
@@ -43,12 +41,11 @@
     <% 
         String action = (String) request.getAttribute("action");
         Voiture voiture = (Voiture) request.getAttribute("voiture");
-        List<Carburant> carburants = (List<Carburant>) request.getAttribute("carburants");
         String formAction = "create".equals(action) ? "/voitures/create" : "/voitures/update";
     %>
 
     <% if ("create".equals(action)) { %>
-        <div class="info">ℹ️ La référence sera générée automatiquement (ex: VOI0001)</div>
+        <div class="info">La référence sera générée automatiquement (ex: VOI0001)</div>
     <% } %>
 
     <form method="POST" action="<%= formAction %>">
@@ -74,29 +71,20 @@
         </div>
 
         <div class="form-group">
-            <label for="idCarburant">Type de Carburant *</label>
-            <select id="idCarburant" name="idCarburant" required>
+            <label for="carburant">Type de Carburant *</label>
+            <select id="carburant" name="carburant" required>
                 <option value="">-- Sélectionnez un carburant --</option>
-                <% 
-                    if (carburants != null) {
-                        for (Carburant c : carburants) {
-                            boolean selected = voiture != null && voiture.getCarburant() != null && voiture.getCarburant().getIdCarburant() == c.getIdCarburant();
-                %>
-                    <option value="<%= c.getIdCarburant() %>" <%= selected ? "selected" : "" %>>
-                        <%= c.getLibelle() %>
-                    </option>
-                <% 
-                        }
-                    }
-                %>
+                <option value="E" <%= voiture != null && "E".equals(voiture.getCarburant()) ? "selected" : "" %>>Essence</option>
+                <option value="H" <%= voiture != null && "H".equals(voiture.getCarburant()) ? "selected" : "" %>>Hybride</option>
+                <option value="D" <%= voiture != null && "D".equals(voiture.getCarburant()) ? "selected" : "" %>>Diesel</option>
             </select>
         </div>
 
         <div class="form-group">
             <button type="submit" class="btn btn-success">
-                <%= "create".equals(action) ? "➕ Créer" : "💾 Mettre à jour" %>
+                <%= "create".equals(action) ? "Créer" : "Mettre à jour" %>
             </button>
-            <a href="/voitures" class="btn btn-secondary">❌ Annuler</a>
+            <a href="/voitures" class="btn btn-secondary">Annuler</a>
         </div>
     </form>
 </body>

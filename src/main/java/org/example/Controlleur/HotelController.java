@@ -1,8 +1,8 @@
 package org.example.Controlleur;
 
 import org.annotation.*;
-import org.example.DAO.HotelDAO;
-import org.example.Model.Hotel;
+import org.example.DAO.LieuDAO;
+import org.example.Model.Lieu;
 import org.Entity.ModelView;
 
 import java.util.List;
@@ -10,18 +10,31 @@ import java.util.List;
 @AnnotationContoller
 public class HotelController {
 
-    private HotelDAO hotelDAO = new HotelDAO();
+    private LieuDAO lieuDAO = new LieuDAO();
 
-    // ========== LISTE DES HOTELS ==========
-    @GetMapping("/hotels")
-    public ModelView listeHotels() {
+    // ========== LISTE DES LIEUX ==========
+    @GetMapping("/lieux")
+    public ModelView listeLieux() {
         ModelView mv = new ModelView();
-        mv.setView("hotels/liste.jsp");
+        mv.setView("lieux/liste.jsp");
         
-        List<Hotel> hotels = hotelDAO.findAll();
-        mv.addAttribute("hotels", hotels);
+        List<Lieu> lieux = lieuDAO.findAll();
+        mv.addAttribute("lieux", lieux);
         
         return mv;
     }
-    
+
+    // ========== API JSON - LISTE DES LIEUX ==========
+    @Json
+    @GetMapping("/api/lieux")
+    public List<Lieu> listeLieuxAPI() {
+        return lieuDAO.findAll();
+    }
+
+    // ========== API JSON - LIEUX PAR TYPE ==========
+    @Json
+    @GetMapping("/api/lieux/type")
+    public List<Lieu> listeLieuxParType(@AnnotationRequestParam("type") String type) {
+        return lieuDAO.findByType(type);
+    }
 }
