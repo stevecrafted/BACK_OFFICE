@@ -302,10 +302,11 @@
                         }
                         
                         int numVagueEx = 1;
+                        SimpleDateFormat sdfHeure = new SimpleDateFormat("HH'h'mm");
                         for (Map.Entry<java.sql.Timestamp, List<SimulationAssignation>> entryEx : existantesParVague.entrySet()) {
                     %>
                         <div class="vague-header" style="background-color: #388e3c;">
-                            <span>🔒 VAGUE EXISTANTE #<%= numVagueEx %> - <%= entryEx.getKey() %></span>
+                            <span>🔒 VAGUE EXISTANTE #<%= numVagueEx %> - <%= sdfHeure.format(entryEx.getKey()) %></span>
                             <label>
                                 <input type="checkbox" class="cb-vague-ex" data-vague-ex="<%= numVagueEx %>" 
                                        onchange="toggleVagueEx(<%= numVagueEx %>)"> Tout sélectionner
@@ -440,10 +441,17 @@
 
                         int numeroVague = 1;
                         int indexGlobal = 0;
+                        SimpleDateFormat sdfVague = new SimpleDateFormat("HH'h'mm");
                         for (Map.Entry<java.sql.Timestamp, List<SimulationAssignation>> entry : assignationsParVague.entrySet()) {
+                            // Récupérer l'intervalle de la vague depuis la première assignation
+                            SimulationAssignation premiereSA = entry.getValue().get(0);
+                            String intervalleVague = "";
+                            if (premiereSA.getDebutVague() != null && premiereSA.getFinFenetreVague() != null) {
+                                intervalleVague = " (" + sdfVague.format(premiereSA.getDebutVague()) + " - " + sdfVague.format(premiereSA.getFinFenetreVague()) + ")";
+                            }
                     %>
                         <div class="vague-header">
-                            <span>🌊 VAGUE #<%= numeroVague %> - <%= entry.getKey() %></span>
+                            <span>🌊 VAGUE #<%= numeroVague %> - Départ: <%= sdfVague.format(entry.getKey()) %><%= intervalleVague %></span>
                             <label>
                                 <input type="checkbox" class="cb-vague" data-vague="<%= numeroVague %>" 
                                        onchange="toggleVague(<%= numeroVague %>)" checked> Tout sélectionner
