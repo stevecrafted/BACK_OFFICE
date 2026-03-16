@@ -140,6 +140,9 @@ public class SimulationAssignationService {
         List<String> vaguesTriees = new ArrayList<>(vagues.keySet());
         Collections.sort(vaguesTriees);
 
+        // Liste des réservations non assignées à retraiter dans les vagues suivantes
+        List<Reservation> reservationsNonAssignees = new ArrayList<>();
+
         int numeroVague = 1;
         for (String cleVague : vaguesTriees) {
             List<Reservation> reservationsVague = vagues.get(cleVague);
@@ -147,6 +150,14 @@ public class SimulationAssignationService {
             System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             System.out.println("🌊 VAGUE #" + numeroVague + " - " + cleVague);
             System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+            // Ajouter les réservations non assignées des vagues précédentes pour retraitement
+            if (!reservationsNonAssignees.isEmpty()) {
+                System.out.println("🔄 Retraitement de " + reservationsNonAssignees.size() + 
+                                   " réservation(s) non assignée(s) des vagues précédentes");
+                reservationsVague.addAll(reservationsNonAssignees);
+                reservationsNonAssignees.clear();
+            }
 
             // Trier par nombre de passagers décroissant
             reservationsVague.sort((r1, r2) -> Integer.compare(r2.getNbPassager(), r1.getNbPassager()));
@@ -199,8 +210,8 @@ public class SimulationAssignationService {
                                        " (" + assignation.getVoiture().getRef() + ") - " +
                                        assignation.getPlacesRestantes() + " places restantes");
                 } else {
-                    System.out.println("   ❌ Aucune voiture disponible");
-                    resultat.ajouterReservationNonAssignee(reservation);
+                    System.out.println("   ❌ Aucune voiture disponible - sera retraitée dans la vague suivante");
+                    reservationsNonAssignees.add(reservation);
                 }
             }
 
@@ -244,9 +255,9 @@ public class SimulationAssignationService {
                 }
 
                 if (chevauchement) {
-                    // Déplacer toutes les réservations vers non-assignées
+                    // Déplacer toutes les réservations vers non-assignées pour retraitement
                     for (Reservation r : assignation.getReservations()) {
-                        resultat.ajouterReservationNonAssignee(r);
+                        reservationsNonAssignees.add(r);
                     }
                 } else {
                     resultat.ajouterAssignation(assignation);
@@ -257,6 +268,20 @@ public class SimulationAssignationService {
             }
 
             numeroVague++;
+            System.out.println();
+        }
+
+        // Traiter les réservations qui restent non assignées après toutes les vagues
+        if (!reservationsNonAssignees.isEmpty()) {
+            System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            System.out.println("❌ " + reservationsNonAssignees.size() + 
+                               " réservation(s) définitivement non assignée(s)");
+            System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            for (Reservation r : reservationsNonAssignees) {
+                System.out.println("   • Réservation #" + r.getId() + " - " + 
+                                   r.getIdClient() + " (" + r.getNbPassager() + " passagers)");
+                resultat.ajouterReservationNonAssignee(r);
+            }
             System.out.println();
         }
 

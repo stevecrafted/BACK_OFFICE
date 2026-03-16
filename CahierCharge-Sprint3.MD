@@ -84,7 +84,7 @@ CREATE TABLE hotel(
     PRIMARY KEY(id)
 );
 test Pull Request
-
+Pourq
 
 Assignation 
     L'assignation doit se presenter sous forme de simmulation d'abord (pas d'insertion de données juste afficher sur tableau)
@@ -112,6 +112,21 @@ Assignation
         
 
     Sprint 6 :
-        Ajout dans 
+        -Date heure debut de traitement d'une vague(n) est par rapport a date heure de la premiere reservation hors (apres ) vague (n-1) 
+        -La date heure de depart est maintenant configuerer par rapport a date heure de la derniere reservation qui a date heure la plus tard dans une vague (plus par rapport date heure debut traitement + temps d'attente)
+       Ex : Voiture 1 apres traitement assigné a :
+            Reservation 2 (5place) 8:00
+            Reservation 1 (2place) 8:10
+            donc date_heure depart  = 8:10
 
+            vague de traitement 1 : traiter toute les reservation compris entre 6h et 6:30 (car 6h est a date heure de reservation MATIN001 et6:30 car 6h +30 min de temps d'attente ) et ; la date de depart de chaque voiture est  configurer par rapport a la date_heure de la reservation qui a la date_heure la plus tard par rapport a ceux qui sont assignés (les autre reservations ) a la voitureEx : Voiture 1 apres traitement assigné a :
+
+            Reservation 2 (5place) 8:00
+
+            Reservation 1 (2place) 8:10
+
+            donc date_heure depart  = 8:10
+
+        -les reservations non assigné avant dans une journé peuvent etre retraiter dans les vagues inferieur
+        donc une reservation non assigé a vague 2 peut probablement etre assigné lors de vague 4 grace a retraitement vague 3,4
 
