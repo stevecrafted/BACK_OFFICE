@@ -50,11 +50,26 @@ public class SimulationAssignationService {
         // Map: idVoiture -> liste de réservations déjà assignées à cette voiture
         Map<Integer, List<Reservation>> voitureReservationsExistantes = new HashMap<>();
 
+        // Compteur de trajets par voiture pour le jour même (base + simulation)
+        Map<Integer, Integer> compteurTrajetsJour = new HashMap<>();
+
         for (Assignation a : assignationsExistantes) {
             reservationsDejaAssignees.add(a.getIdReservation());
-            voitureReservationsExistantes
-                .computeIfAbsent(a.getIdVoiture(), k -> new ArrayList<>())
-                .add(reservationDAO.findById(a.getIdReservation()));
+            Reservation r = reservationDAO.findById(a.getIdReservation());
+            if (r != null) {
+                voitureReservationsExistantes
+                    .computeIfAbsent(a.getIdVoiture(), k -> new ArrayList<>())
+                    .add(r);
+                
+                // Compter les trajets du jour même en base
+                if (r.getDateHeure() != null) {
+                    java.sql.Date dateRes = new java.sql.Date(r.getDateHeure().getTime());
+                    if (dateRes.equals(dateSimulation)) {
+                        compteurTrajetsJour.put(a.getIdVoiture(), 
+                            compteurTrajetsJour.getOrDefault(a.getIdVoiture(), 0) + 1);
+                    }
+                }
+            }
         }
 
         // Filtrer les réservations : exclure celles déjà assignées
@@ -175,7 +190,8 @@ public class SimulationAssignationService {
                     reservation, 
                     voituresDisponibles, 
                     assignationsVague,
-                    heureVague
+                    heureVague,
+                    compteurTrajetsJour
                 );
 
                 if (assignation != null) {
@@ -186,6 +202,12 @@ public class SimulationAssignationService {
                     System.out.println("   ❌ Aucune voiture disponible");
                     resultat.ajouterReservationNonAssignee(reservation);
                 }
+            }
+
+            // Incrémenter le compteur de trajets pour chaque voiture utilisée dans cette vague
+            for (SimulationAssignation assignation : assignationsVague.values()) {
+                int idVoiture = assignation.getVoiture().getIdVoiture();
+                compteurTrajetsJour.put(idVoiture, compteurTrajetsJour.getOrDefault(idVoiture, 0) + 1);
             }
 
             // Récupérer l'intervalle de la vague pour l'affichage
@@ -257,7 +279,8 @@ public class SimulationAssignationService {
             Reservation reservation,
             List<Voiture> voituresDisponibles,
             Map<Integer, SimulationAssignation> assignationsVague,
-            Timestamp heureVague) {
+            Timestamp heureVague,
+            Map<Integer, Integer> compteurTrajetsJour) {
 
         int nbPassagers = reservation.getNbPassager();
 
@@ -293,12 +316,10 @@ public class SimulationAssignationService {
                 .collect(Collectors.toList());
 
         // 5. SPRINT 6: Priorité au nombre de trajets (minimum) POUR LE JOUR MÊME
-        // Compter le nombre de trajets effectués par chaque voiture pour la date de simulation
+        // Utiliser le compteur passé en paramètre (base + simulation)
         Map<Integer, Integer> nbTrajetsParVoiture = new HashMap<>();
         for (Voiture v : voituresOptimales) {
-            // Convertir Timestamp en Date pour la requête
-            java.sql.Date dateSimulation = new java.sql.Date(heureVague.getTime());
-            int nbTrajets = assignationDAO.countTrajetsParVoiture(v.getIdVoiture(), dateSimulation);
+            int nbTrajets = compteurTrajetsJour.getOrDefault(v.getIdVoiture(), 0);
             nbTrajetsParVoiture.put(v.getIdVoiture(), nbTrajets);
         }
 
@@ -357,13 +378,17 @@ public class SimulationAssignationService {
 
     /**
      * Calcule les heures de départ et d'arrivée pour une assignation
-     * - Départ = date_heure de la réservation
+     * - Départ = date_heure de la DERNIÈRE réservation assignée à cette voiture (la plus tard)
      * - Route: aéroport -> lieu le plus proche -> lieu suivant -> ... -> dernier lieu -> retour aéroport
      * - Si distances similaires, ordre alphabétique du lieu
      */
     private void calculerHeuresTrajet(SimulationAssignation assignation, Lieu aeroport, double vitesseMoyenne) {
-        // L'heure de départ est celle de la vague (= date_heure des réservations)
-        Timestamp depart = assignation.getHeureVague();
+        // SPRINT 6: L'heure de départ = date_heure de la DERNIÈRE réservation de cette voiture
+        Timestamp depart = assignation.getReservations().stream()
+                .map(Reservation::getDateHeure)
+                .max(Timestamp::compareTo)
+                .orElse(assignation.getHeureVague());
+        
         assignation.setDateHeureDepart(depart);
 
         if (aeroport == null) {
@@ -444,12 +469,22 @@ public class SimulationAssignationService {
     }
 
     /**
-     * Regroupe les réservations par vague selon le temps d'attente.
-     * - La première réservation de la journée ouvre une fenêtre [t, t + temps_attente]
+     * Regroupe les réservations par vague selon le temps d'attente (SPRINT 6).
+     * 
+     * LOGIQUE:
+     * - Vague commence à la première réservation non traitée
+     * - Fenêtre de traitement = [première_réservation, première_réservation + temps_attente]
      * - Toutes les réservations dans cette fenêtre font partie de la même vague
-     * - L'heure de départ de la vague = heure de la dernière réservation dans la fenêtre
-     * - La vague suivante commence à la première réservation APRÈS la fin de la fenêtre (strictement après)
-     * La clé de chaque vague est le timestamp de la dernière réservation (= heure de départ)
+     * - La vague suivante commence à la première réservation APRÈS la fenêtre
+     * 
+     * IMPORTANT: Chaque voiture part à l'heure de SA dernière réservation (calculé dans calculerHeuresTrajet)
+     * 
+     * Exemple:
+     * - MATIN001: 06:00 → Ouvre fenêtre [06:00, 06:30]
+     * - MATIN002: 06:30 → Dans la fenêtre, même vague
+     * - MATIN003: 07:00 → Hors fenêtre, nouvelle vague
+     * 
+     * Si VOI0004 a MATIN001 (06:00) + MATIN003 (07:00), elle part à 07:00
      */
     private Map<String, List<Reservation>> regrouperParVague(List<Reservation> reservations) {
         int tempsAttenteMinutes = parametreDAO.getTempsAttente();
@@ -463,9 +498,8 @@ public class SimulationAssignationService {
         int i = 0;
 
         while (i < triees.size()) {
-            // La première réservation ouvre la fenêtre
+            // La première réservation ouvre la fenêtre de traitement
             Timestamp debutFenetre = triees.get(i).getDateHeure();
-            // Tronquer aux minutes (ignorer les secondes)
             long debutMs = tronquerAuxMinutes(debutFenetre);
             long finFenetreMs = debutMs + tempsAttenteMs;
 
@@ -488,8 +522,8 @@ public class SimulationAssignationService {
                 }
             }
 
-            // La clé de la vague = heure de la dernière réservation (= heure de départ de la vague)
-            String cleVague = String.format("%tF %tH:%tM", derniereHeure, derniereHeure, derniereHeure);
+            // La clé de la vague = fenêtre de traitement (pour affichage)
+            String cleVague = String.format("%tF %tH:%tM", debutFenetre, debutFenetre, debutFenetre);
             vagues.put(cleVague, vagueReservations);
 
             // Stocker l'intervalle de la vague [début fenêtre, fin fenêtre]
