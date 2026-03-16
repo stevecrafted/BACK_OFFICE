@@ -139,4 +139,35 @@ public class AssignationDAO {
         assignation.setDateAssignation(rs.getTimestamp("date_assignation"));
         return assignation;
     }
+
+    /**
+     * SPRINT 6: Compte le nombre de trajets effectués par une voiture POUR UNE DATE DONNÉE
+     * Un trajet = une assignation (Aéroport -> Hôtel -> Aéroport)
+     * Le compteur se réinitialise chaque jour
+     */
+    public int countTrajetsParVoiture(int idVoiture, java.sql.Date dateSimulation) {
+        String sql = "SELECT COUNT(*) as nb_trajets " +
+                     "FROM assignation a " +
+                     "JOIN reservations r ON a.id_reservation = r.id " +
+                     "WHERE a.id_voiture = ? AND DATE(r.date_heure) = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, idVoiture);
+            stmt.setDate(2, dateSimulation);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("nb_trajets");
+                }
+            }
+
+        } catch (SQLException e) {
+            System.err.println("❌ Erreur lors du comptage des trajets : " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return 0;
+    }
 }

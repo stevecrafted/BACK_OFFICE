@@ -251,6 +251,7 @@ public class SimulationAssignationService {
 
     /**
      * Trouve la meilleure voiture pour une réservation
+     * Sprint 6: Priorité au nombre de trajets (min)
      */
     private SimulationAssignation trouverMeilleureVoiture(
             Reservation reservation,
@@ -291,12 +292,37 @@ public class SimulationAssignationService {
                 .filter(v -> (v.getCapacite() - nbPassagers) == ecartMin)
                 .collect(Collectors.toList());
 
-        // 5. Priorité carburant: D (Diesel) > H (Hybride) > E (Essence)
-        Voiture voitureChoisie = choisirParCarburant(voituresOptimales);
+        // 5. SPRINT 6: Priorité au nombre de trajets (minimum) POUR LE JOUR MÊME
+        // Compter le nombre de trajets effectués par chaque voiture pour la date de simulation
+        Map<Integer, Integer> nbTrajetsParVoiture = new HashMap<>();
+        for (Voiture v : voituresOptimales) {
+            // Convertir Timestamp en Date pour la requête
+            java.sql.Date dateSimulation = new java.sql.Date(heureVague.getTime());
+            int nbTrajets = assignationDAO.countTrajetsParVoiture(v.getIdVoiture(), dateSimulation);
+            nbTrajetsParVoiture.put(v.getIdVoiture(), nbTrajets);
+        }
 
-        System.out.println("   → Écart minimal: " + ecartMin + " | Carburant: " + voitureChoisie.getCarburantLibelle());
+        // Trouver le nombre minimum de trajets
+        int nbTrajetsMin = nbTrajetsParVoiture.values().stream()
+                .min(Integer::compare)
+                .orElse(0);
 
-        // 6. Créer une nouvelle assignation
+        // Filtrer les voitures avec le nombre minimum de trajets
+        List<Voiture> voituresAvecMinTrajets = voituresOptimales.stream()
+                .filter(v -> nbTrajetsParVoiture.get(v.getIdVoiture()) == nbTrajetsMin)
+                .collect(Collectors.toList());
+
+        System.out.println("   → Écart minimal: " + ecartMin + " | Trajets min: " + nbTrajetsMin + 
+                           " | Candidats: " + voituresAvecMinTrajets.size());
+
+        // 6. Priorité carburant: D (Diesel) > H (Hybride) > E (Essence)
+        Voiture voitureChoisie = choisirParCarburant(voituresAvecMinTrajets);
+
+        System.out.println("   → Voiture choisie: #" + voitureChoisie.getIdVoiture() + 
+                           " (" + voitureChoisie.getRef() + ") | Carburant: " + voitureChoisie.getCarburantLibelle() +
+                           " | Trajets: " + nbTrajetsParVoiture.get(voitureChoisie.getIdVoiture()));
+
+        // 7. Créer une nouvelle assignation
         SimulationAssignation assignation = new SimulationAssignation(voitureChoisie, heureVague);
         assignation.ajouterReservation(reservation);
         assignationsVague.put(voitureChoisie.getIdVoiture(), assignation);

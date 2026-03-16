@@ -101,11 +101,17 @@ Assignation
                 -Si non ou si pas encore de voiture qui possede deja des passager on cherche d'autre voiture par rapport a ces regle de gestion :
                     -nbr place dispo >= nbr passager et prioriser la voiture dans l'ecart |(nbrplaceDispo-nbrpassager)| soit le plus minim que possible
                     -Si tous nbr dispo sont egaux :
-                        - On privilegie les diesel 
-                            Si pas de diesel ou tout est diesel on fais random
+                        -(Sprint6)On privilegie les voiture dont le nombre de trajet effectuer (Aeroport1 ->Hotel1-> Aeroport1) est le plus petit (min)
+                        Si tous les nombre de trajet sont egaux :
+                            - On privilegie les diesel 
+                                Si pas de diesel ou tout est diesel on fais random
         puis on continue le traitement par la reservation suivant 
     a la fin d'un vague de traitement
         - on ne doit plus considerer les voitures assigné pour cette vague lors de la prochaine vague de traitement 
+        -(Sprint6)Maintenant on peut considére les voistures deja assigné
         
+
+    Sprint 6 :
+        Ajout dans 
 
 
