@@ -94,31 +94,28 @@ CREATE TABLE token_validite(
 -- ========================================
 
 -- Voitures (carburant: E=Essence,  D=Diesel)
-INSERT INTO Voiture (Capacite, ref_, carburant) VALUES (5, 'VOI0001', 'E');
-INSERT INTO Voiture (Capacite, ref_, carburant) VALUES (5, 'VOI0002', 'D');
+INSERT INTO Voiture (Capacite, ref_, carburant) VALUES (12, 'vehicule1', 'D');
+INSERT INTO Voiture (Capacite, ref_, carburant) VALUES (12, 'vehicule2', 'E');
 
-INSERT INTO Voiture (Capacite, ref_, carburant) VALUES (5, 'VOI0003', 'E');
-INSERT INTO Voiture (Capacite, ref_, carburant) VALUES (5, 'VOI0004', 'D');
+INSERT INTO Voiture (Capacite, ref_, carburant) VALUES (5, 'vehicule3', 'D');
+INSERT INTO Voiture (Capacite, ref_, carburant) VALUES (5, 'vehicule4', 'E');
 
 -- Lieux (1 aeroport + 4 hotels)
 INSERT INTO lieu (code, libelle, type) VALUES ('AER', 'Aéroport Ivato', 'aeroport');
-INSERT INTO lieu (code, libelle, type) VALUES ('COL', 'Colbert', 'hotel');
-INSERT INTO lieu (code, libelle, type) VALUES ('NOV', 'Novotel', 'hotel');
-INSERT INTO lieu (code, libelle, type) VALUES ('IBI', 'Ibis', 'hotel');
-INSERT INTO lieu (code, libelle, type) VALUES ('LOK', 'Lokanga', 'hotel');
+INSERT INTO lieu (code, libelle, type) VALUES ('HOT', 'hotel1', 'hotel');  
+INSERT INTO lieu (code, libelle, type) VALUES ('HOT', 'hotel2', 'hotel');  
 
 -- Distances entre lieux (id_from < id_to)
 -- id=1: Aéroport, id=2: Colbert, id=3: Novotel, id=4: Ibis, id=5: Lokanga
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 2, 5.00);  -- Aéroport <-> Colbert
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 3, 9.00);  -- Aéroport <-> Novotel
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 4, 8.00);  -- Aéroport <-> Ibis
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 5, 3.00);  -- Aéroport <-> Lokanga
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (2, 3, 6.00);  -- Colbert <-> Novotel
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (2, 4, 12.00); -- Colbert <-> Ibis
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (2, 5, 8.00);  -- Colbert <-> Lokanga
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (3, 4, 4.00);  -- Novotel <-> Ibis
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (3, 5, 11.00); -- Novotel <-> Lokanga
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (4, 5, 9.00);  -- Ibis <-> Lokanga
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 2, 5);
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (2, 3, 10);
+
+INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client1', 7, '2026-03-18 09:00:00');
+INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client2', 11, '2026-03-18 09:00:00');
+INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client3', 3, '2026-03-18 09:00:00');
+INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client4', 1, '2026-03-18 09:00:00');
+INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client5', 2, '2026-03-18 09:00:00');
+INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client6', 20, '2026-03-18 09:00:00');
 
 -- Paramètres système
 INSERT INTO parametre (nom, valeur) VALUES ('app_version', '2.0.0');
