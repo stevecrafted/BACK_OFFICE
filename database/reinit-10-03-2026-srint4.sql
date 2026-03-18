@@ -54,7 +54,7 @@ CREATE TABLE distance(
 );
 
 -- Table Reservations
-ervations(
+CREATE TABLE reservations(
     id SERIAL PRIMARY KEY,
     id_lieu INT NOT NULL,
     id_client VARCHAR(250),
@@ -93,11 +93,12 @@ CREATE TABLE token_validite(
 -- 3. INSERTION DES DONNÉES DE BASE
 -- ========================================
 
--- Voitures (carburant: E=Essence, H=Hybride, D=Diesel)
+-- Voitures (carburant: E=Essence,  D=Diesel)
 INSERT INTO Voiture (Capacite, ref_, carburant) VALUES (5, 'VOI0001', 'E');
-INSERT INTO Voiture (Capacite, ref_, carburant) VALUES (7, 'VOI0002', 'D');
-INSERT INTO Voiture (Capacite, ref_, carburant) VALUES (4, 'VOI0003', 'E');
-INSERT INTO Voiture (Capacite, ref_, carburant) VALUES (5, 'VOI0004', 'H');
+INSERT INTO Voiture (Capacite, ref_, carburant) VALUES (5, 'VOI0002', 'D');
+
+INSERT INTO Voiture (Capacite, ref_, carburant) VALUES (5, 'VOI0003', 'E');
+INSERT INTO Voiture (Capacite, ref_, carburant) VALUES (5, 'VOI0004', 'D');
 
 -- Lieux (1 aeroport + 4 hotels)
 INSERT INTO lieu (code, libelle, type) VALUES ('AER', 'Aéroport Ivato', 'aeroport');
@@ -125,60 +126,4 @@ INSERT INTO parametre (nom, valeur) VALUES ('maintenance_mode', 'false');
 INSERT INTO parametre (nom, valeur) VALUES ('max_reservations_per_day', '100');
 INSERT INTO parametre (nom, valeur) VALUES ('VM', '60'); -- Vitesse Moyenne en km/h
 INSERT INTO parametre (nom, valeur) VALUES ('temps_attente', '30'); -- Temps d'attente en minutes pour le groupement des vagues
-
--- ========================================
--- 4. DONNÉES DE TEST POUR LA SIMULATION
--- ========================================
-
--- Scénario 1: Même date_heure (même minute) - 2 réservations groupées
--- Ces 2 réservations doivent être traitées ensemble (même date, heure, minute)
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)
-VALUES (2, 'CLIENT001', 4, '2026-03-15 10:30:00'); -- Colbert, 4 passagers
-
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)
-VALUES (3, 'CLIENT002', 2, '2026-03-15 10:30:00'); -- Novotel, 2 passagers (même minute)
-
--- Scénario 2: Même date_heure (même minute) - 3 réservations groupées
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)
-VALUES (4, 'CLIENT003', 3, '2026-03-15 14:00:00'); -- Ibis, 3 passagers
-
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)
-VALUES (5, 'CLIENT004', 2, '2026-03-15 14:00:00'); -- Lokanga, 2 passagers
-
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)
-VALUES (2, 'CLIENT005', 1, '2026-03-15 14:00:00'); -- Colbert, 1 passager
-
--- Scénario 3: Réservation seule avec beaucoup de passagers (test capacité)
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)
-VALUES (3, 'CLIENT006', 6, '2026-03-15 16:00:00'); -- Novotel, 6 passagers (seule VOI0002 a 7 places)
-
--- Scénario 4: Autre date pour tester le filtre par date
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)
-VALUES (4, 'CLIENT007', 2, '2026-03-20 09:00:00'); -- Ibis, 2 passagers
-
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)
-VALUES (5, 'CLIENT008', 3, '2026-03-20 09:00:00'); -- Lokanga, 3 passagers
-
--- Scénario 5: Test priorité carburant (D > H > E)
--- Réservation avec 5 passagers -> VOI0001(5,E) et VOI0004(5,H) sont candidates
--- VOI0004(H) devrait être choisie (H > E)
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)
-VALUES (2, 'CLIENT009', 5, '2026-03-22 11:00:00'); -- Colbert, 5 passagers
-
--- Scénario 6: Test dépassement capacité (aucune voiture ne peut)
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)
-VALUES (3, 'CLIENT010', 10, '2026-03-25 08:00:00'); -- 10 passagers, max voiture = 7
-
--- ========================================
--- 5. VÉRIFICATION
--- ========================================
-SELECT 'Voitures: ' || COUNT(*) FROM Voiture;
-SELECT 'Lieux: ' || COUNT(*) FROM lieu;
-SELECT 'Distances: ' || COUNT(*) FROM distance;
-SELECT 'Réservations: ' || COUNT(*) FROM reservations;
-SELECT 'Assignations: ' || COUNT(*) FROM assignation;
-SELECT 'Paramètres: ' || COUNT(*) FROM parametre;
-
--- ========================================
--- FIN DU SCRIPT
--- ========================================
+ 
