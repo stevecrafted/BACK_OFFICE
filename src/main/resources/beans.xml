@@ -8,7 +8,7 @@
         <property name="driverClassName" value="org.postgresql.Driver"/>
         <property name="url" value="jdbc:postgresql://localhost:5432/gde"/>
         <property name="username" value="postgres"/>
-        <property name="password" value="pgsql"/>
+        <property name="password" value="steve"/>
     </bean>
 
 </beans>

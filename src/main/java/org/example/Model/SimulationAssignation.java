@@ -40,6 +40,12 @@ public class SimulationAssignation {
 
     // Getters
     public Voiture getVoiture() { return voiture; }
+    public void setVoiture(Voiture voiture) {
+        this.voiture = voiture;
+        // Recalculer les places restantes avec la nouvelle capacité
+        int passagersActuels = reservations.stream().mapToInt(Reservation::getNbPassager).sum();
+        this.placesRestantes = voiture.getCapacite() - passagersActuels;
+    }
     public List<Reservation> getReservations() { return reservations; }
     public int getPlacesRestantes() { return placesRestantes; }
     public Timestamp getHeureVague() { return heureVague; }

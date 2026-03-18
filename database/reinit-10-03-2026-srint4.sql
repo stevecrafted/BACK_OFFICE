@@ -54,7 +54,7 @@ CREATE TABLE distance(
 );
 
 -- Table Reservations
-CREATE TABLE reservations(
+ervations(
     id SERIAL PRIMARY KEY,
     id_lieu INT NOT NULL,
     id_client VARCHAR(250),

@@ -9,6 +9,6 @@ call mvn install:install-file ^
   -Dpackaging=jar
 
 call mvn clean package
-call java -jar target/spring-init-test-1.0.0.jar
+call "%JAVA_HOME%\bin\java" -jar target/spring-init-test-1.0.0.jar
 
 endlocal
