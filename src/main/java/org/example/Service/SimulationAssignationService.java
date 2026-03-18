@@ -224,13 +224,27 @@ public class SimulationAssignationService {
             // Récupérer l'intervalle de la vague pour l'affichage
             Timestamp[] intervalleVague = vagueIntervalles.get(cleVague);
 
-            // Calculer les heures d'arrivée pour chaque assignation de cette vague
-            // Puis vérifier que l'intervalle [départ, arrivée] ne chevauche aucun intervalle existant
+            // ÉTAPE 1: Calculer les heures de trajet initiales pour chaque assignation
             for (SimulationAssignation assignation : assignationsVague.values()) {
                 if (intervalleVague != null) {
                     assignation.setDebutVague(intervalleVague[0]);
                     assignation.setFinFenetreVague(intervalleVague[1]);
                 }
+                calculerHeuresTrajet(assignation, aeroport, vitesseMoyenne);
+            }
+
+            // ÉTAPE 2: Vérifier si des réassignations sont possibles pendant la fenêtre d'attente
+            verifierReassignationPendantAttente(
+                assignationsVague,
+                intervalleVague,
+                toutesVoitures,
+                intervallesOccupes,
+                compteurTrajetsJour
+            );
+
+            // ÉTAPE 3: Recalculer les heures de trajet (si réassignation) et vérifier les chevauchements
+            for (SimulationAssignation assignation : assignationsVague.values()) {
+                // Recalculer les heures (au cas où la voiture a changé)
                 calculerHeuresTrajet(assignation, aeroport, vitesseMoyenne);
 
                 long departMs = assignation.getDateHeureDepart().getTime();
@@ -374,6 +388,152 @@ public class SimulationAssignationService {
         assignationsVague.put(voitureChoisie.getIdVoiture(), assignation);
 
         return assignation;
+    }
+
+    /**
+     * Compare deux voitures pour déterminer si la nouvelle est meilleure que l'actuelle
+     * Critères (dans l'ordre): écart capacité → nombre trajets → carburant (D > H > E)
+     *
+     * @return true si nouvelleVoiture est strictement meilleure que voitureActuelle
+     */
+    private boolean estMeilleureVoiture(Voiture nouvelleVoiture, Voiture voitureActuelle,
+            int nbPassagers, Map<Integer, Integer> compteurTrajetsJour) {
+
+        // 1. Comparer l'écart de capacité
+        int ecartNouvelle = nouvelleVoiture.getCapacite() - nbPassagers;
+        int ecartActuelle = voitureActuelle.getCapacite() - nbPassagers;
+
+        if (ecartNouvelle < ecartActuelle) return true;
+        if (ecartNouvelle > ecartActuelle) return false;
+
+        // 2. Comparer le nombre de trajets (moins = mieux)
+        int trajetsNouvelle = compteurTrajetsJour.getOrDefault(nouvelleVoiture.getIdVoiture(), 0);
+        int trajetsActuelle = compteurTrajetsJour.getOrDefault(voitureActuelle.getIdVoiture(), 0);
+
+        if (trajetsNouvelle < trajetsActuelle) return true;
+        if (trajetsNouvelle > trajetsActuelle) return false;
+
+        // 3. Comparer le carburant (D > H > E)
+        int prioriteNouvelle = getPrioriteCarburant(nouvelleVoiture.getCarburant());
+        int prioriteActuelle = getPrioriteCarburant(voitureActuelle.getCarburant());
+
+        return prioriteNouvelle > prioriteActuelle;
+    }
+
+    /**
+     * Retourne la priorité du carburant (plus c'est haut, mieux c'est)
+     */
+    private int getPrioriteCarburant(String carburant) {
+        if ("D".equals(carburant)) return 3;  // Diesel = priorité max 
+        if ("E".equals(carburant)) return 2;  // Essence
+        return 0;
+    }
+
+    /**
+     * Vérifie si des réassignations sont possibles pendant la fenêtre d'attente.
+     *
+     * Si une meilleure voiture devient disponible pendant la fenêtre d'attente
+     * (avant l'heure de départ d'une assignation), on réassigne.
+     *
+     * @param assignationsVague      Les assignations de la vague actuelle
+     * @param intervalleVague        [debutFenetre, finFenetre] de la vague
+     * @param toutesVoitures         Toutes les voitures du système
+     * @param intervallesOccupes     Intervalles occupés par voiture
+     * @param compteurTrajetsJour    Compteur de trajets par voiture pour le jour
+     * @param assignationsVagueIds   IDs des voitures déjà utilisées dans la vague
+     */
+    private void verifierReassignationPendantAttente(
+            Map<Integer, SimulationAssignation> assignationsVague,
+            Timestamp[] intervalleVague,
+            List<Voiture> toutesVoitures,
+            Map<Integer, List<long[]>> intervallesOccupes,
+            Map<Integer, Integer> compteurTrajetsJour) {
+
+        if (intervalleVague == null || assignationsVague.isEmpty()) {
+            return;
+        }
+
+        long debutFenetreMs = intervalleVague[0].getTime();
+        long finFenetreMs = intervalleVague[1].getTime();
+
+        // Pour chaque assignation de la vague
+        for (SimulationAssignation assignation : assignationsVague.values()) {
+            Voiture voitureActuelle = assignation.getVoiture();
+            long heureDepartMs = assignation.getDateHeureDepart().getTime();
+
+            // Calculer le nombre total de passagers de cette assignation
+            int nbPassagersTotal = assignation.getReservations().stream()
+                    .mapToInt(Reservation::getNbPassager)
+                    .sum();
+
+            // Chercher les voitures qui deviennent disponibles dans [debutFenetre, heureDepart[
+            for (Voiture voitureCandidate : toutesVoitures) {
+                // Ignorer la voiture actuelle
+                if (voitureCandidate.getIdVoiture() == voitureActuelle.getIdVoiture()) {
+                    continue;
+                }
+
+                // Ignorer les voitures déjà utilisées dans cette vague
+                if (assignationsVague.containsKey(voitureCandidate.getIdVoiture())) {
+                    continue;
+                }
+
+                // Vérifier la capacité
+                if (voitureCandidate.getCapacite() < nbPassagersTotal) {
+                    continue;
+                }
+
+                // Trouver le moment où cette voiture devient disponible
+                long heureDispoMs = trouverHeureDisponibilite(voitureCandidate, intervallesOccupes, debutFenetreMs);
+
+                // La voiture doit devenir disponible APRÈS le début de la fenêtre
+                // et AVANT l'heure de départ de l'assignation
+                if (heureDispoMs > debutFenetreMs && heureDispoMs < heureDepartMs) {
+                    // Vérifier si cette voiture est meilleure
+                    if (estMeilleureVoiture(voitureCandidate, voitureActuelle, nbPassagersTotal, compteurTrajetsJour)) {
+                        System.out.println("   🔄 RÉASSIGNATION: Voiture #" + voitureActuelle.getIdVoiture() +
+                                " (" + voitureActuelle.getRef() + ", " + voitureActuelle.getCarburantLibelle() +
+                                ") → Voiture #" + voitureCandidate.getIdVoiture() +
+                                " (" + voitureCandidate.getRef() + ", " + voitureCandidate.getCarburantLibelle() +
+                                ") disponible à " + new Timestamp(heureDispoMs));
+
+                        // Mettre à jour le compteur de trajets
+                        compteurTrajetsJour.put(voitureActuelle.getIdVoiture(),
+                                compteurTrajetsJour.getOrDefault(voitureActuelle.getIdVoiture(), 1) - 1);
+                        compteurTrajetsJour.put(voitureCandidate.getIdVoiture(),
+                                compteurTrajetsJour.getOrDefault(voitureCandidate.getIdVoiture(), 0) + 1);
+
+                        // Réassigner
+                        assignation.setVoiture(voitureCandidate);
+                        voitureActuelle = voitureCandidate;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Trouve l'heure à laquelle une voiture devient disponible (fin de son dernier intervalle occupé)
+     * Si la voiture n'a pas d'intervalle chevauchant avec la fenêtre, retourne 0 (disponible immédiatement)
+     */
+    private long trouverHeureDisponibilite(Voiture voiture, Map<Integer, List<long[]>> intervallesOccupes, long debutFenetreMs) {
+        List<long[]> intervals = intervallesOccupes.get(voiture.getIdVoiture());
+        if (intervals == null || intervals.isEmpty()) {
+            return 0; // Disponible depuis le début
+        }
+
+        long heureDispoDerniere = 0;
+        for (long[] interval : intervals) {
+            // Si l'intervalle se termine APRÈS le début de la fenêtre
+            if (interval[1] > debutFenetreMs) {
+                // La voiture devient disponible à la fin de cet intervalle
+                if (interval[1] > heureDispoDerniere) {
+                    heureDispoDerniere = interval[1];
+                }
+            }
+        }
+
+        return heureDispoDerniere;
     }
 
     /**

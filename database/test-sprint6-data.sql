@@ -22,14 +22,9 @@ DELETE FROM reservations;
 -- VOI0004 (5 places, Hybride) : 0 trajet aujourd'hui
 
 -- Réservations déjà traitées ce matin (2026-03-16)
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)
-VALUES (2, 'MATIN001', 3, '2026-03-16 06:00:00'); -- Colbert
-
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)
-VALUES (3, 'MATIN002', 4, '2026-03-16 06:30:00'); -- Novotel
-
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)
-VALUES (4, 'MATIN003', 2, '2026-03-16 07:00:00'); -- Ibis
+INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure) VALUES (2, 'MATIN001', 3, '2026-03-16 06:00:00'); -- Colbert
+INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure) VALUES (3, 'MATIN002', 4, '2026-03-16 06:30:00'); -- Novotel
+INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure) VALUES (4, 'MATIN003', 2, '2026-03-16 07:00:00'); -- Ibis
 
 -- Créer les assignations du matin (même jour)
 -- VOI0001: 2 trajets (IDs 1, 2)
