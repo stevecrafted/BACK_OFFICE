@@ -106,6 +106,8 @@ INSERT INTO lieu (code, libelle, type) VALUES ('COL', 'Colbert', 'hotel');
 INSERT INTO lieu (code, libelle, type) VALUES ('NOV', 'Novotel', 'hotel');
 INSERT INTO lieu (code, libelle, type) VALUES ('IBI', 'Ibis', 'hotel');
 INSERT INTO lieu (code, libelle, type) VALUES ('LOK', 'Lokanga', 'hotel');
+INSERT INTO lieu (code, libelle, type) VALUES ('HOT', 'hotel1', 'hotel');
+INSERT INTO lieu (code, libelle, type) VALUES ('HOT', 'hotel2', 'hotel');   
 
 -- Distances entre lieux (id_from < id_to)
 -- id=1: Aéroport, id=2: Colbert, id=3: Novotel, id=4: Ibis, id=5: Lokanga
@@ -119,6 +121,8 @@ INSERT INTO distance (id_from, id_to, kilometer) VALUES (2, 5, 8.00);  -- Colber
 INSERT INTO distance (id_from, id_to, kilometer) VALUES (3, 4, 4.00);  -- Novotel <-> Ibis
 INSERT INTO distance (id_from, id_to, kilometer) VALUES (3, 5, 11.00); -- Novotel <-> Lokanga
 INSERT INTO distance (id_from, id_to, kilometer) VALUES (4, 5, 9.00);  -- Ibis <-> Lokanga
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 3, 100);  -- Ibis <-> Lokanga
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (2, 3, 200);  -- Ibis <-> Lokanga
 
 -- Paramètres système
 INSERT INTO parametre (nom, valeur) VALUES ('app_version', '2.0.0');

@@ -20,6 +20,18 @@ public class SimulationAssignationService {
     // Stocke les intervalles [debutFenetre, finFenetre] de chaque vague (clé = cleVague)
     private Map<String, Timestamp[]> vagueIntervalles = new LinkedHashMap<>();
 
+    private static class CandidatAffectation {
+        private final Voiture voiture;
+        private final SimulationAssignation assignationExistante;
+        private final int placesDisponibles;
+
+        private CandidatAffectation(Voiture voiture, SimulationAssignation assignationExistante, int placesDisponibles) {
+            this.voiture = voiture;
+            this.assignationExistante = assignationExistante;
+            this.placesDisponibles = placesDisponibles;
+        }
+    }
+
     /**
      * Simule l'assignation des voitures pour une date donnée
      * SANS INSERTION EN BASE - Juste simulation
@@ -159,8 +171,17 @@ public class SimulationAssignationService {
                 reservationsNonAssignees.clear();
             }
 
-            // Trier par nombre de passagers décroissant
-            reservationsVague.sort((r1, r2) -> Integer.compare(r2.getNbPassager(), r1.getNbPassager()));
+            // Trier par nombre de passagers décroissant, puis date_heure croissante
+            reservationsVague.sort((r1, r2) -> {
+                int cmpPassagers = Integer.compare(r2.getNbPassager(), r1.getNbPassager());
+                if (cmpPassagers != 0) return cmpPassagers;
+                Timestamp t1 = r1.getDateHeure();
+                Timestamp t2 = r2.getDateHeure();
+                if (t1 == null && t2 == null) return 0;
+                if (t1 == null) return 1;
+                if (t2 == null) return -1;
+                return t1.compareTo(t2);
+            });
 
             // Heure de la vague = heure de la dernière réservation (déjà calculée par regrouperParVague)
             // On utilise la clé de la vague qui correspond à la dernière réservation
@@ -191,25 +212,51 @@ public class SimulationAssignationService {
             // Assignations temporaires pour cette vague
             Map<Integer, SimulationAssignation> assignationsVague = new LinkedHashMap<>();
 
-            // Traiter chaque réservation de la vague
+            // Traiter chaque réservation de la vague (fractionnable)
             for (Reservation reservation : reservationsVague) {
-                System.out.println("\n📌 Réservation #" + reservation.getId() + 
-                                   " - " + reservation.getNbPassager() + " passagers - Lieu #" + 
-                                   reservation.getIdLieu());
+                System.out.println("\n📌 Réservation #" + reservation.getId() +
+                        " - " + reservation.getNbPassager() + " passagers - Lieu #" +
+                        reservation.getIdLieu());
 
-                SimulationAssignation assignation = trouverMeilleureVoiture(
-                    reservation, 
-                    voituresDisponibles, 
-                    assignationsVague,
-                    heureVague,
-                    compteurTrajetsJour
-                );
+                int passagersRestants = reservation.getNbPassager();
+                boolean aEtePartiellementAssignee = false;
 
-                if (assignation != null) {
-                    System.out.println("   ✅ Assignée à Voiture #" + assignation.getVoiture().getIdVoiture() + 
-                                       " (" + assignation.getVoiture().getRef() + ") - " +
-                                       assignation.getPlacesRestantes() + " places restantes");
-                } else {
+                while (passagersRestants > 0) {
+                    CandidatAffectation candidat = choisirCandidatPourFraction(
+                            passagersRestants,
+                            voituresDisponibles,
+                            assignationsVague,
+                            compteurTrajetsJour);
+
+                    if (candidat == null || candidat.placesDisponibles <= 0) {
+                        break;
+                    }
+
+                    int nbAffectes = Math.min(passagersRestants, candidat.placesDisponibles);
+                    Reservation fraction = clonerReservationAvecPassagers(reservation, nbAffectes);
+
+                    SimulationAssignation cible = candidat.assignationExistante;
+                    if (cible == null) {
+                        cible = new SimulationAssignation(candidat.voiture, heureVague);
+                        assignationsVague.put(candidat.voiture.getIdVoiture(), cible);
+                        System.out.println("   → Nouvelle voiture sélectionnée: #" + candidat.voiture.getIdVoiture() +
+                                " (" + candidat.voiture.getRef() + ")");
+                    }
+
+                    cible.ajouterReservation(fraction);
+                    passagersRestants -= nbAffectes;
+                    aEtePartiellementAssignee = true;
+
+                    System.out.println("   ✅ " + nbAffectes + " passager(s) affecté(s) à Voiture #" +
+                            cible.getVoiture().getIdVoiture() + " | Restants: " + passagersRestants);
+                }
+
+                if (passagersRestants > 0) {
+                    Reservation reliquat = clonerReservationAvecPassagers(reservation, passagersRestants);
+                    reservationsNonAssignees.add(reliquat);
+                    System.out.println("   ❌ " + passagersRestants +
+                            " passager(s) non assigné(s) - sera/seront retraité(s) dans la vague suivante");
+                } else if (!aEtePartiellementAssignee) {
                     System.out.println("   ❌ Aucune voiture disponible - sera retraitée dans la vague suivante");
                     reservationsNonAssignees.add(reservation);
                 }
@@ -452,6 +499,98 @@ public class SimulationAssignationService {
         return assignation;
     }
 
+        /**
+         * Sélectionne le meilleur candidat pour une fraction de réservation.
+         * Règles:
+         * 1) place >= demande avec écart minimal
+         * 2) sinon, place < demande avec place max (plus proche inférieur)
+         * 3) tie-break: moins de trajets du jour, diesel, random
+         */
+        private CandidatAffectation choisirCandidatPourFraction(
+            int nbPassagersRestants,
+            List<Voiture> voituresDisponibles,
+            Map<Integer, SimulationAssignation> assignationsVague,
+            Map<Integer, Integer> compteurTrajetsJour) {
+
+        List<CandidatAffectation> candidats = new ArrayList<>();
+
+        // Candidats provenant des voitures déjà ouvertes dans la vague
+        for (SimulationAssignation sa : assignationsVague.values()) {
+            if (sa.getPlacesRestantes() > 0) {
+            candidats.add(new CandidatAffectation(sa.getVoiture(), sa, sa.getPlacesRestantes()));
+            }
+        }
+
+        // Candidats provenant des voitures non encore utilisées dans la vague
+        for (Voiture v : voituresDisponibles) {
+            if (!assignationsVague.containsKey(v.getIdVoiture()) && v.getCapacite() > 0) {
+            candidats.add(new CandidatAffectation(v, null, v.getCapacite()));
+            }
+        }
+
+        if (candidats.isEmpty()) {
+            return null;
+        }
+
+        List<CandidatAffectation> superieurs = candidats.stream()
+            .filter(c -> c.placesDisponibles >= nbPassagersRestants)
+            .collect(Collectors.toList());
+
+        List<CandidatAffectation> pool;
+        if (!superieurs.isEmpty()) {
+            int ecartMin = superieurs.stream()
+                .mapToInt(c -> c.placesDisponibles - nbPassagersRestants)
+                .min().orElse(0);
+            pool = superieurs.stream()
+                .filter(c -> (c.placesDisponibles - nbPassagersRestants) == ecartMin)
+                .collect(Collectors.toList());
+        } else {
+            List<CandidatAffectation> inferieurs = candidats.stream()
+                .filter(c -> c.placesDisponibles < nbPassagersRestants)
+                .collect(Collectors.toList());
+            if (inferieurs.isEmpty()) {
+            return null;
+            }
+            int placeMax = inferieurs.stream()
+                .mapToInt(c -> c.placesDisponibles)
+                .max().orElse(0);
+            pool = inferieurs.stream()
+                .filter(c -> c.placesDisponibles == placeMax)
+                .collect(Collectors.toList());
+        }
+
+        // Tie-break 1: nombre de trajets du jour (moins c'est mieux)
+        int minTrajets = pool.stream()
+            .mapToInt(c -> compteurTrajetsJour.getOrDefault(c.voiture.getIdVoiture(), 0)
+                + (assignationsVague.containsKey(c.voiture.getIdVoiture()) ? 1 : 0))
+            .min().orElse(0);
+        List<CandidatAffectation> apresTrajets = pool.stream()
+            .filter(c -> (compteurTrajetsJour.getOrDefault(c.voiture.getIdVoiture(), 0)
+                + (assignationsVague.containsKey(c.voiture.getIdVoiture()) ? 1 : 0)) == minTrajets)
+            .collect(Collectors.toList());
+
+        // Tie-break 2: diesel prioritaire
+        int meilleurCarburant = apresTrajets.stream()
+            .mapToInt(c -> getPrioriteCarburant(c.voiture.getCarburant()))
+            .max().orElse(0);
+        List<CandidatAffectation> apresCarburant = apresTrajets.stream()
+            .filter(c -> getPrioriteCarburant(c.voiture.getCarburant()) == meilleurCarburant)
+            .collect(Collectors.toList());
+
+        // Tie-break 3: random
+        return apresCarburant.get(new Random().nextInt(apresCarburant.size()));
+        }
+
+        private Reservation clonerReservationAvecPassagers(Reservation source, int nbPassagers) {
+        Reservation clone = new Reservation();
+        clone.setId(source.getId());
+        clone.setIdLieu(source.getIdLieu());
+        clone.setIdClient(source.getIdClient());
+        clone.setDateHeure(source.getDateHeure());
+        clone.setNbPassager(nbPassagers);
+        return clone;
+        }
+
     /**
      * Compare deux voitures pour déterminer si la nouvelle est meilleure que l'actuelle
      * Critères (dans l'ordre): écart capacité → nombre trajets → carburant (D > H > E)
@@ -486,8 +625,7 @@ public class SimulationAssignationService {
      * Retourne la priorité du carburant (plus c'est haut, mieux c'est)
      */
     private int getPrioriteCarburant(String carburant) {
-        if ("D".equals(carburant)) return 3;  // Diesel = priorité max 
-        if ("E".equals(carburant)) return 2;  // Essence
+        if ("D".equals(carburant)) return 1;  // Diesel prioritaire
         return 0;
     }
 
