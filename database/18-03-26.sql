@@ -107,7 +107,8 @@ INSERT INTO lieu (code, libelle, type) VALUES ('HOT', 'hotel2', 'hotel');
 
 -- Distances entre lieux (id_from < id_to)
 -- id=1: Aéroport, id=2: Colbert, id=3: Novotel, id=4: Ibis, id=5: Lokanga
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 2, 5.00);
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 2, 5);
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (2, 3, 10);
 
 INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client1', 7, '2026-03-18 09:00:00');
 INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client2', 11, '2026-03-18 09:00:00');
