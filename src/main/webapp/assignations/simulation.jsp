@@ -395,28 +395,7 @@
                     </form>
                 </div>
             <% } %>
-
-            <!-- ==================== RÉSULTAT DE LA SIMULATION ==================== -->
-            <!-- Résumé de la simulation -->
-            <div class="summary">
-                <div class="summary-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                    <h3><%= resultat.getNbVagues() %></h3>
-                    <p>🌊 Vagues de traitement</p>
-                </div>
-                <div class="summary-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-                    <h3><%= resultat.getTotalReservationsAssignees() %></h3>
-                    <p>✅ Réservations assignées</p>
-                </div>
-                <div class="summary-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
-                    <h3><%= resultat.getAssignations().size() %></h3>
-                    <p>🚗 Voitures utilisées</p>
-                </div>
-                <div class="summary-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
-                    <h3><%= resultat.getReservationsNonAssignees().size() %></h3>
-                    <p>❌ Non assignées</p>
-                </div>
-            </div>
-
+ 
             <% if (resultat.getTotalReservationsAssignees() > 0) { %>
 
                 <!-- Formulaire de confirmation avec checkboxes -->

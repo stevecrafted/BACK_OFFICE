@@ -242,6 +242,35 @@ public class SimulationAssignationService {
                 compteurTrajetsJour
             );
 
+            // ÉTAPE 2.5: Traiter les réservations non assignées avec les voitures qui reviennent
+            // Créer une copie temporaire des intervalles occupés avec les assignations de cette vague
+            Map<Integer, List<long[]>> intervallesTempAvecVague = new HashMap<>();
+            for (Map.Entry<Integer, List<long[]>> entry : intervallesOccupes.entrySet()) {
+                intervallesTempAvecVague.put(entry.getKey(), new ArrayList<>(entry.getValue()));
+            }
+            for (SimulationAssignation sa : assignationsVague.values()) {
+                long depMs = sa.getDateHeureDepart().getTime();
+                long arrMs = sa.getDateHeureArrivee().getTime();
+                intervallesTempAvecVague.computeIfAbsent(sa.getVoiture().getIdVoiture(), k -> new ArrayList<>())
+                    .add(new long[]{depMs, arrMs});
+            }
+
+            // Liste pour stocker les assignations différées (trajets de retour)
+            List<SimulationAssignation> assignationsDifferees = new ArrayList<>();
+
+            // Tenter d'assigner les réservations non assignées aux voitures qui reviennent
+            List<Reservation> reservationsTraitees = traiterReservationsNonAssigneesAvecVoituresRetour(
+                reservationsNonAssignees,
+                intervalleVague,
+                toutesVoitures,
+                intervallesTempAvecVague,
+                assignationsDifferees,  // Passer la liste des assignations différées
+                compteurTrajetsJour,
+                aeroport,
+                vitesseMoyenne
+            );
+            reservationsNonAssignees.removeAll(reservationsTraitees);
+
             // ÉTAPE 3: Recalculer les heures de trajet (si réassignation) et vérifier les chevauchements
             for (SimulationAssignation assignation : assignationsVague.values()) {
                 // Recalculer les heures (au cas où la voiture a changé)
@@ -276,6 +305,39 @@ public class SimulationAssignationService {
                 } else {
                     resultat.ajouterAssignation(assignation);
                     // Enregistrer le nouvel intervalle occupé
+                    intervallesOccupes.computeIfAbsent(idVoitureAssignee, k -> new ArrayList<>())
+                        .add(new long[]{departMs, arriveeMs});
+                }
+            }
+
+            // ÉTAPE 3.5: Ajouter les assignations différées (trajets de retour) au résultat
+            for (SimulationAssignation assignationDifferee : assignationsDifferees) {
+                long departMs = assignationDifferee.getDateHeureDepart().getTime();
+                long arriveeMs = assignationDifferee.getDateHeureArrivee().getTime();
+                int idVoitureAssignee = assignationDifferee.getVoiture().getIdVoiture();
+
+                // Vérifier chevauchement avec les intervalles existants
+                boolean chevauchement = false;
+                List<long[]> intervals = intervallesOccupes.get(idVoitureAssignee);
+                if (intervals != null) {
+                    for (long[] interval : intervals) {
+                        if (departMs < interval[1] && interval[0] < arriveeMs) {
+                            chevauchement = true;
+                            System.out.println("   ⚠️ Voiture #" + idVoitureAssignee +
+                                " chevauchement détecté (différé): trajet [" + assignationDifferee.getDateHeureDepart() +
+                                " - " + assignationDifferee.getDateHeureArrivee() +
+                                "] chevauche [" + new Timestamp(interval[0]) + " - " + new Timestamp(interval[1]) + "]");
+                            break;
+                        }
+                    }
+                }
+
+                if (chevauchement) {
+                    for (Reservation r : assignationDifferee.getReservations()) {
+                        reservationsNonAssignees.add(r);
+                    }
+                } else {
+                    resultat.ajouterAssignation(assignationDifferee);
                     intervallesOccupes.computeIfAbsent(idVoitureAssignee, k -> new ArrayList<>())
                         .add(new long[]{departMs, arriveeMs});
                 }
@@ -537,6 +599,131 @@ public class SimulationAssignationService {
     }
 
     /**
+     * Traite les réservations non assignées en vérifiant si des voitures reviennent dans la fenêtre d'attente.
+     *
+     * @return Liste des réservations qui ont pu être assignées
+     */
+    private List<Reservation> traiterReservationsNonAssigneesAvecVoituresRetour(
+            List<Reservation> reservationsNonAssignees,
+            Timestamp[] intervalleVague,
+            List<Voiture> toutesVoitures,
+            Map<Integer, List<long[]>> intervallesOccupes,
+            List<SimulationAssignation> assignationsDifferees,  // Liste pour stocker les nouvelles assignations
+            Map<Integer, Integer> compteurTrajetsJour,
+            Lieu aeroport,
+            double vitesseMoyenne) {
+
+        List<Reservation> reservationsTraitees = new ArrayList<>();
+
+        if (intervalleVague == null || reservationsNonAssignees.isEmpty()) {
+            return reservationsTraitees;
+        }
+
+        long debutFenetreMs = intervalleVague[0].getTime();
+        long finFenetreMs = intervalleVague[1].getTime();
+
+        // Trier les réservations par nombre de passagers décroissant
+        List<Reservation> reservationsATraiter = new ArrayList<>(reservationsNonAssignees);
+        reservationsATraiter.sort((r1, r2) -> Integer.compare(r2.getNbPassager(), r1.getNbPassager()));
+
+        for (Reservation reservation : reservationsATraiter) {
+            int nbPassagers = reservation.getNbPassager();
+
+            // Chercher les voitures qui reviennent dans la fenêtre d'attente
+            List<VoitureDisponibilite> voituresQuiReviennent = new ArrayList<>();
+
+            for (Voiture voiture : toutesVoitures) {
+                // Ignorer les voitures sans capacité suffisante
+                if (voiture.getCapacite() < nbPassagers) {
+                    continue;
+                }
+
+                long heureDispoMs = trouverHeureDisponibilite(voiture, intervallesOccupes, debutFenetreMs);
+
+                // La voiture doit revenir APRÈS le début de la fenêtre et AVANT la fin
+                if (heureDispoMs > debutFenetreMs && heureDispoMs <= finFenetreMs) {
+                    voituresQuiReviennent.add(new VoitureDisponibilite(voiture, heureDispoMs));
+                }
+            }
+
+            if (voituresQuiReviennent.isEmpty()) {
+                continue;
+            }
+
+            // Trier par: heure de dispo croissante, puis critères habituels
+            voituresQuiReviennent.sort((v1, v2) -> {
+                // D'abord par heure de disponibilité
+                int cmpHeure = Long.compare(v1.heureDispoMs, v2.heureDispoMs);
+                if (cmpHeure != 0) return cmpHeure;
+
+                // Puis par écart capacité
+                int ecart1 = v1.voiture.getCapacite() - nbPassagers;
+                int ecart2 = v2.voiture.getCapacite() - nbPassagers;
+                int cmpEcart = Integer.compare(ecart1, ecart2);
+                if (cmpEcart != 0) return cmpEcart;
+
+                // Puis par nombre de trajets
+                int trajets1 = compteurTrajetsJour.getOrDefault(v1.voiture.getIdVoiture(), 0);
+                int trajets2 = compteurTrajetsJour.getOrDefault(v2.voiture.getIdVoiture(), 0);
+                int cmpTrajets = Integer.compare(trajets1, trajets2);
+                if (cmpTrajets != 0) return cmpTrajets;
+
+                // Puis par carburant (D > H > E)
+                return Integer.compare(getPrioriteCarburant(v2.voiture.getCarburant()),
+                                       getPrioriteCarburant(v1.voiture.getCarburant()));
+            });
+
+            // Prendre la meilleure voiture
+            VoitureDisponibilite meilleure = voituresQuiReviennent.get(0);
+            Voiture voitureChoisie = meilleure.voiture;
+            Timestamp heureDepart = new Timestamp(meilleure.heureDispoMs);
+
+            System.out.println("\n   🔄 ASSIGNATION DIFFÉRÉE: Réservation #" + reservation.getId() +
+                    " (" + reservation.getIdClient() + ") → Voiture #" + voitureChoisie.getIdVoiture() +
+                    " (" + voitureChoisie.getRef() + ", " + voitureChoisie.getCarburantLibelle() +
+                    ") disponible à " + heureDepart);
+
+            // Créer une NOUVELLE assignation pour ce trajet différé (trajet de retour)
+            SimulationAssignation nouvelleAssignation = new SimulationAssignation(voitureChoisie, heureDepart);
+            nouvelleAssignation.setDateHeureDepart(heureDepart); // Définir l'heure de départ = retour voiture
+            nouvelleAssignation.ajouterReservation(reservation);
+            nouvelleAssignation.setDebutVague(intervalleVague[0]);
+            nouvelleAssignation.setFinFenetreVague(intervalleVague[1]);
+            assignationsDifferees.add(nouvelleAssignation);  // Ajouter à la liste des assignations différées
+
+            // Calculer les heures de trajet
+            calculerHeuresTrajet(nouvelleAssignation, aeroport, vitesseMoyenne);
+
+            // Mettre à jour les intervalles occupés
+            long departMs = nouvelleAssignation.getDateHeureDepart().getTime();
+            long arriveeMs = nouvelleAssignation.getDateHeureArrivee().getTime();
+            intervallesOccupes.computeIfAbsent(voitureChoisie.getIdVoiture(), k -> new ArrayList<>())
+                .add(new long[]{departMs, arriveeMs});
+
+            // Incrémenter le compteur de trajets
+            compteurTrajetsJour.put(voitureChoisie.getIdVoiture(),
+                compteurTrajetsJour.getOrDefault(voitureChoisie.getIdVoiture(), 0) + 1);
+
+            reservationsTraitees.add(reservation);
+        }
+
+        return reservationsTraitees;
+    }
+
+    /**
+     * Classe interne pour stocker une voiture et son heure de disponibilité
+     */
+    private static class VoitureDisponibilite {
+        Voiture voiture;
+        long heureDispoMs;
+
+        VoitureDisponibilite(Voiture voiture, long heureDispoMs) {
+            this.voiture = voiture;
+            this.heureDispoMs = heureDispoMs;
+        }
+    }
+
+    /**
      * Choisit la voiture selon la priorité carburant: D > H > E, puis random
      */
     private Voiture choisirParCarburant(List<Voiture> voitures) {
@@ -548,10 +735,10 @@ public class SimulationAssignationService {
             return diesel.size() == 1 ? diesel.get(0) : diesel.get(new Random().nextInt(diesel.size()));
         }
 
-        List<Voiture> hybride = voitures.stream().filter(v -> "H".equals(v.getCarburant())).collect(Collectors.toList());
-        if (!hybride.isEmpty()) {
-            return hybride.size() == 1 ? hybride.get(0) : hybride.get(new Random().nextInt(hybride.size()));
-        }
+        // List<Voiture> hybride = voitures.stream().filter(v -> "H".equals(v.getCarburant())).collect(Collectors.toList());
+        // if (!hybride.isEmpty()) {
+        //     return hybride.size() == 1 ? hybride.get(0) : hybride.get(new Random().nextInt(hybride.size()));
+        // }
 
         List<Voiture> essence = voitures.stream().filter(v -> "E".equals(v.getCarburant())).collect(Collectors.toList());
         if (!essence.isEmpty()) {
@@ -563,17 +750,23 @@ public class SimulationAssignationService {
 
     /**
      * Calcule les heures de départ et d'arrivée pour une assignation
-     * - Départ = date_heure de la DERNIÈRE réservation assignée à cette voiture (la plus tard)
+     * - Départ = MAX(date_heure de la DERNIÈRE réservation, heure de retour de la voiture si déjà définie)
      * - Route: aéroport -> lieu le plus proche -> lieu suivant -> ... -> dernier lieu -> retour aéroport
      * - Si distances similaires, ordre alphabétique du lieu
      */
     private void calculerHeuresTrajet(SimulationAssignation assignation, Lieu aeroport, double vitesseMoyenne) {
         // SPRINT 6: L'heure de départ = date_heure de la DERNIÈRE réservation de cette voiture
-        Timestamp depart = assignation.getReservations().stream()
+        Timestamp departReservation = assignation.getReservations().stream()
                 .map(Reservation::getDateHeure)
                 .max(Timestamp::compareTo)
                 .orElse(assignation.getHeureVague());
-        
+
+        // Si une heure de départ est déjà définie (ex: voiture qui revient), prendre le MAX
+        Timestamp departExistant = assignation.getDateHeureDepart();
+        Timestamp depart = (departExistant != null && departExistant.after(departReservation))
+                ? departExistant
+                : departReservation;
+
         assignation.setDateHeureDepart(depart);
 
         if (aeroport == null) {
