@@ -332,18 +332,22 @@
                             <% for (SimulationAssignation saEx : entryEx.getValue()) {
                                 Voiture vEx = saEx.getVoiture();
                                 int totalPEx = 0;
-                                StringBuilder dataDeleteSelections = new StringBuilder();
+                                Integer idAssignationEx = null;
+                                if (saEx.getReservations() != null && !saEx.getReservations().isEmpty()) {
+                                    Assignation aEx = new org.example.DAO.AssignationDAO().findByReservation(saEx.getReservations().get(0).getId());
+                                    if (aEx != null) {
+                                        idAssignationEx = aEx.getId();
+                                    }
+                                }
                                 for (int iEx = 0; iEx < saEx.getReservations().size(); iEx++) {
                                     Reservation rEx = saEx.getReservations().get(iEx);
                                     totalPEx += rEx.getNbPassager();
-                                    if (iEx > 0) dataDeleteSelections.append(",");
-                                    dataDeleteSelections.append(rEx.getId());
                                 }
                             %>
                                 <tr>
                                     <td>
                                         <input type="checkbox" class="cb-line-ex cb-vague-ex-<%= numVagueEx %>" 
-                                               data-delete-selections="<%= dataDeleteSelections.toString() %>"
+                                               data-delete-selections="<%= idAssignationEx != null ? idAssignationEx : "" %>"
                                                data-vague-ex="<%= numVagueEx %>">
                                     </td>
                                     <td>#<%= vEx.getIdVoiture() %></td>
@@ -465,18 +469,21 @@
                                             totalPassagers += r.getNbPassager();
                                         }
                                         
-                                        // Préparer les données pour les checkboxes (idVoiture:idRes1,idVoiture:idRes2,...)
-                                        StringBuilder dataSelections = new StringBuilder();
+                                        // Payload par ligne: idVoiture|departMs|arriveeMs|idRes:ordre;idRes:ordre
+                                        long departMs = sa.getDateHeureDepart() != null ? sa.getDateHeureDepart().getTime() : 0L;
+                                        long arriveeMs = sa.getDateHeureArrivee() != null ? sa.getDateHeureArrivee().getTime() : 0L;
+                                        StringBuilder reservationPayload = new StringBuilder();
                                         for (int i = 0; i < sa.getReservations().size(); i++) {
                                             Reservation r = sa.getReservations().get(i);
-                                            if (i > 0) dataSelections.append(",");
-                                            dataSelections.append(voiture.getIdVoiture()).append(":").append(r.getId());
+                                            if (i > 0) reservationPayload.append(";");
+                                            reservationPayload.append(r.getId()).append(":").append(i + 1);
                                         }
+                                        String dataSelectionLine = voiture.getIdVoiture() + "|" + departMs + "|" + arriveeMs + "|" + reservationPayload;
                                 %>
                                 <tr>
                                     <td>
                                         <input type="checkbox" class="cb-line cb-vague-<%= numeroVague %>" 
-                                               data-selections="<%= dataSelections.toString() %>"
+                                               data-selections="<%= dataSelectionLine %>"
                                                data-vague="<%= numeroVague %>" checked>
                                     </td>
                                     <td>#<%= voiture.getIdVoiture() %></td>
@@ -616,11 +623,14 @@
                 }
             }
 
-            document.getElementById('selectionsInput').value = selections.join(',');
+            document.getElementById('selectionsInput').value = selections.join('##');
             
             var nbTotal = 0;
             for (var j = 0; j < selections.length; j++) {
-                nbTotal += selections[j].split(',').length;
+                var parts = selections[j].split('|');
+                if (parts.length === 4 && parts[3]) {
+                    nbTotal += parts[3].split(';').length;
+                }
             }
             
             return confirm('Confirmer l\'enregistrement de ' + nbTotal + ' assignation(s) sélectionnée(s) ?');
@@ -664,7 +674,7 @@
             var selections = [];
             for (var i = 0; i < checkboxes.length; i++) {
                 var data = checkboxes[i].getAttribute('data-delete-selections');
-                if (data) {
+                if (data && data.trim() !== '') {
                     selections.push(data);
                 }
             }

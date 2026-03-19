@@ -7,6 +7,7 @@
 -- 1. SUPPRESSION DE TOUTES LES TABLES
 -- ========================================
 DROP TABLE IF EXISTS assignation CASCADE;
+DROP TABLE IF EXISTS reservation_assignation CASCADE;
 DROP TABLE IF EXISTS distance CASCADE;
 DROP TABLE IF EXISTS reservations CASCADE;
 DROP TABLE IF EXISTS Voiture CASCADE;
@@ -62,9 +63,18 @@ CREATE TABLE reservations(
 CREATE TABLE assignation(
     id SERIAL PRIMARY KEY,
     id_voiture INT NOT NULL,
+    date_heure_depart TIMESTAMP,
+    date_heure_arrivee TIMESTAMP,
+    FOREIGN KEY (id_voiture) REFERENCES Voiture(idVoiture)
+);
+
+-- Table de liaison assignation <-> reservations (ordre d'itinéraire)
+CREATE TABLE reservation_assignation(
+    id SERIAL PRIMARY KEY,
+    id_assignation INT NOT NULL,
     id_reservation INT NOT NULL,
-    date_assignation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (id_voiture) REFERENCES Voiture(idVoiture),
+    ordre_itineraire INT NOT NULL,
+    FOREIGN KEY (id_assignation) REFERENCES assignation(id),
     FOREIGN KEY (id_reservation) REFERENCES reservations(id),
     UNIQUE(id_reservation)
 );

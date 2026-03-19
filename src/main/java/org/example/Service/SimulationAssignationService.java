@@ -59,27 +59,66 @@ public class SimulationAssignationService {
         // 2. Récupérer les assignations existantes en base et exclure ces réservations
         List<Assignation> assignationsExistantes = assignationDAO.findAll();
         Set<Integer> reservationsDejaAssignees = new HashSet<>();
-        // Map: idVoiture -> liste de réservations déjà assignées à cette voiture
-        Map<Integer, List<Reservation>> voitureReservationsExistantes = new HashMap<>();
 
         // Compteur de trajets par voiture pour le jour même (base + simulation)
         Map<Integer, Integer> compteurTrajetsJour = new HashMap<>();
 
+        // 3. Récupérer toutes les voitures et la vitesse moyenne
+        List<Voiture> toutesVoitures = voitureDAO.findAll();
+        double vitesseMoyenne = parametreDAO.getVM();
+        Lieu aeroport = lieuDAO.findAeroport();
+
+        // 4. Construire les assignations existantes pour affichage et pré-remplir les intervalles occupés
+        // Chaque voiture a une liste d'intervalles [departMs, arriveeMs] pendant lesquels elle est occupée
+        Map<Integer, List<long[]>> intervallesOccupes = new HashMap<>();
+
         for (Assignation a : assignationsExistantes) {
-            reservationsDejaAssignees.add(a.getIdReservation());
-            Reservation r = reservationDAO.findById(a.getIdReservation());
-            if (r != null) {
-                voitureReservationsExistantes
-                    .computeIfAbsent(a.getIdVoiture(), k -> new ArrayList<>())
-                    .add(r);
-                
-                // Compter les trajets du jour même en base
-                if (r.getDateHeure() != null) {
-                    java.sql.Date dateRes = new java.sql.Date(r.getDateHeure().getTime());
-                    if (dateRes.equals(dateSimulation)) {
-                        compteurTrajetsJour.put(a.getIdVoiture(), 
-                            compteurTrajetsJour.getOrDefault(a.getIdVoiture(), 0) + 1);
-                    }
+            Voiture voiture = voitureDAO.findById(a.getIdVoiture());
+            if (voiture == null) {
+                continue;
+            }
+
+            List<Reservation> reservationsDeLAssignation = new ArrayList<>();
+            List<ReservationAssignation> liens = new ArrayList<>(a.getReservationAssignations());
+            liens.sort(Comparator.comparingInt(ReservationAssignation::getOrdreItineraire));
+
+            for (ReservationAssignation ra : liens) {
+                Reservation r = reservationDAO.findById(ra.getIdReservation());
+                if (r != null) {
+                    reservationsDeLAssignation.add(r);
+                    reservationsDejaAssignees.add(r.getId());
+                }
+            }
+
+            if (!reservationsDeLAssignation.isEmpty()) {
+                Timestamp heureVague = a.getDateHeureDepart() != null
+                        ? a.getDateHeureDepart()
+                        : reservationsDeLAssignation.get(0).getDateHeure();
+                SimulationAssignation saExistante = new SimulationAssignation(voiture, heureVague);
+                for (Reservation r : reservationsDeLAssignation) {
+                    saExistante.ajouterReservation(r);
+                }
+
+                saExistante.setDateHeureDepart(a.getDateHeureDepart());
+                saExistante.setDateHeureArrivee(a.getDateHeureArrivee());
+
+                if (saExistante.getDateHeureDepart() == null || saExistante.getDateHeureArrivee() == null) {
+                    // fallback uniquement si données historiques incomplètes
+                    calculerHeuresTrajet(saExistante, aeroport, vitesseMoyenne);
+                }
+
+                resultat.ajouterAssignationExistante(saExistante);
+
+                if (saExistante.getDateHeureDepart() != null && saExistante.getDateHeureArrivee() != null) {
+                    intervallesOccupes.computeIfAbsent(a.getIdVoiture(), k -> new ArrayList<>())
+                            .add(new long[]{saExistante.getDateHeureDepart().getTime(), saExistante.getDateHeureArrivee().getTime()});
+                }
+
+                java.sql.Date dateDepart = saExistante.getDateHeureDepart() == null
+                        ? null
+                        : new java.sql.Date(saExistante.getDateHeureDepart().getTime());
+                if (dateDepart != null && dateDepart.equals(dateSimulation)) {
+                    compteurTrajetsJour.put(a.getIdVoiture(), compteurTrajetsJour.getOrDefault(a.getIdVoiture(), 0) + 1);
                 }
             }
         }
@@ -94,50 +133,6 @@ public class SimulationAssignationService {
 
         System.out.println("📌 " + reservationsDejaAssignees.size() + " réservation(s) déjà assignée(s) en base (exclues)");
         System.out.println("📋 " + reservationsASimuler.size() + " réservation(s) à simuler\n");
-
-        // 3. Récupérer toutes les voitures et la vitesse moyenne
-        List<Voiture> toutesVoitures = voitureDAO.findAll();
-        double vitesseMoyenne = parametreDAO.getVM();
-        Lieu aeroport = lieuDAO.findAeroport();
-
-        // 4. Construire les assignations existantes pour affichage et pré-remplir les intervalles occupés
-        // Chaque voiture a une liste d'intervalles [departMs, arriveeMs] pendant lesquels elle est occupée
-        Map<Integer, List<long[]>> intervallesOccupes = new HashMap<>();
-
-        for (Map.Entry<Integer, List<Reservation>> entry : voitureReservationsExistantes.entrySet()) {
-            int idVoiture = entry.getKey();
-            List<Reservation> resExistantes = entry.getValue();
-            // Filtrer les réservations nulles (au cas où findById retourne null)
-            resExistantes.removeIf(r -> r == null);
-            if (resExistantes.isEmpty()) continue;
-
-            Voiture voiture = voitureDAO.findById(idVoiture);
-            if (voiture == null) continue;
-
-            // Regrouper par vague (même minute)
-            Map<String, List<Reservation>> vaguesExistantes = new TreeMap<>();
-            for (Reservation r : resExistantes) {
-                if (r.getDateHeure() != null) {
-                    Timestamp heure = r.getDateHeure();
-                    String cleVague = String.format("%tF %tH:%tM", heure, heure, heure);
-                    vaguesExistantes.computeIfAbsent(cleVague, k -> new ArrayList<>()).add(r);
-                }
-            }
-
-            for (List<Reservation> vagueRes : vaguesExistantes.values()) {
-                Timestamp heureVague = vagueRes.get(0).getDateHeure();
-                SimulationAssignation saExistante = new SimulationAssignation(voiture, heureVague);
-                for (Reservation r : vagueRes) {
-                    saExistante.ajouterReservation(r);
-                }
-                calculerHeuresTrajet(saExistante, aeroport, vitesseMoyenne);
-                resultat.ajouterAssignationExistante(saExistante);
-
-                // Enregistrer l'intervalle occupé [départ, arrivée]
-                intervallesOccupes.computeIfAbsent(idVoiture, k -> new ArrayList<>())
-                    .add(new long[]{saExistante.getDateHeureDepart().getTime(), saExistante.getDateHeureArrivee().getTime()});
-            }
-        }
 
         System.out.println("🔒 " + intervallesOccupes.size() + " voiture(s) avec des intervalles occupés\n");
 
