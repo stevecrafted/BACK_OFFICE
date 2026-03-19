@@ -111,18 +111,17 @@ INSERT INTO lieu (code, libelle, type) VALUES ('HOT', 'hotel2', 'hotel');
 
 INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 2, 5);
 INSERT INTO distance (id_from, id_to, kilometer) VALUES (2, 3, 10);
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 3, 15);
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 3, 10);
 
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client1', 7, '2026-03-18 09:00:00');
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client2', 11, '2026-03-18 09:00:00');
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client3', 3, '2026-03-18 09:00:00');
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client4', 1, '2026-03-18 09:00:00');
+INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client1', 7, '2026-03-18 09:15:00');
+INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (3, 'client2', 11, '2026-03-18 09:00:00');
+INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client3', 3, '2026-03-18 09:30:00');
+INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client4', 1, '2026-03-18 09:45:00');
 INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client5', 2, '2026-03-18 09:00:00');
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client6', 20, '2026-03-18 09:00:00');
+INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client6', 20, '2026-03-18 09:15:00');
 
 INSERT INTO parametre (nom, valeur) VALUES ('app_version', '2.0.0');
 INSERT INTO parametre (nom, valeur) VALUES ('maintenance_mode', 'false');
 INSERT INTO parametre (nom, valeur) VALUES ('max_reservations_per_day', '100');
 INSERT INTO parametre (nom, valeur) VALUES ('VM', '60'); -- Vitesse Moyenne en km/h
-INSERT INTO parametre (nom, valeur) VALUES ('temps_attente', '30'); -- Temps d'attente en minutes pour le groupement des vagues
- 
+INSERT INTO parametre (nom, valeur) VALUES ('temps_attente', '10'); -- Temps d'attente en minutes pour le groupement des vagues

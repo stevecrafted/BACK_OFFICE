@@ -182,8 +182,20 @@ public class SimulationAssignationService {
             // On utilise la clé de la vague qui correspond à la dernière réservation
             Timestamp heureVague = Timestamp.valueOf(cleVague + ":00");
 
+                // Intervalle de la vague (début/fin fenêtre d'attente)
+                Timestamp[] intervalleVague = vagueIntervalles.get(cleVague);
+
+                // Départ commun de la vague: si une voiture revient pendant la fenêtre,
+                // on peut décaler le départ commun et re-évaluer l'optimal avec ce parc élargi.
+                Timestamp heureDepartCommune = calculerHeureDepartCommuneVague(
+                    heureVague,
+                    intervalleVague,
+                    toutesVoitures,
+                    intervallesOccupes
+                );
+
             // Filtrer les voitures disponibles : celles qui ne sont pas en trajet à l'heure de la vague
-            long heureVagueMs = heureVague.getTime();
+                long heureVagueMs = heureDepartCommune.getTime();
             List<Voiture> voituresDisponibles = new ArrayList<>();
             for (Voiture v : toutesVoitures) {
                 List<long[]> intervals = intervallesOccupes.get(v.getIdVoiture());
@@ -232,7 +244,7 @@ public class SimulationAssignationService {
 
                     SimulationAssignation cible = candidat.assignationExistante;
                     if (cible == null) {
-                        cible = new SimulationAssignation(candidat.voiture, heureVague);
+                        cible = new SimulationAssignation(candidat.voiture, heureDepartCommune);
                         assignationsVague.put(candidat.voiture.getIdVoiture(), cible);
                         System.out.println("   → Nouvelle voiture sélectionnée: #" + candidat.voiture.getIdVoiture() +
                                 " (" + candidat.voiture.getRef() + ")");
@@ -263,15 +275,13 @@ public class SimulationAssignationService {
                 compteurTrajetsJour.put(idVoiture, compteurTrajetsJour.getOrDefault(idVoiture, 0) + 1);
             }
 
-            // Récupérer l'intervalle de la vague pour l'affichage
-            Timestamp[] intervalleVague = vagueIntervalles.get(cleVague);
-
             // ÉTAPE 1: Calculer les heures de trajet initiales pour chaque assignation
             for (SimulationAssignation assignation : assignationsVague.values()) {
                 if (intervalleVague != null) {
                     assignation.setDebutVague(intervalleVague[0]);
                     assignation.setFinFenetreVague(intervalleVague[1]);
                 }
+                assignation.setDateHeureDepart(heureDepartCommune);
                 calculerHeuresTrajet(assignation, aeroport, vitesseMoyenne);
             }
 
@@ -729,6 +739,45 @@ public class SimulationAssignationService {
         }
 
         return heureDispoDerniere;
+    }
+
+    /**
+     * Calcule l'heure de départ commune d'une vague.
+     *
+     * Règle métier: si une voiture revient pendant la fenêtre d'attente,
+     * on peut retarder le départ commun à ce retour pour reconsidérer l'optimal.
+     */
+    private Timestamp calculerHeureDepartCommuneVague(
+            Timestamp heureVague,
+            Timestamp[] intervalleVague,
+            List<Voiture> toutesVoitures,
+            Map<Integer, List<long[]>> intervallesOccupes) {
+
+        if (intervalleVague == null) {
+            return heureVague;
+        }
+
+        long departInitialMs = heureVague.getTime();
+        long finFenetreMs = intervalleVague[1].getTime();
+        long meilleurDepartMs = departInitialMs;
+        long retourLePlusTot = Long.MAX_VALUE;
+
+        for (Voiture voiture : toutesVoitures) {
+            long heureDispo = trouverHeureDisponibilite(voiture, intervallesOccupes, departInitialMs);
+            if (heureDispo > departInitialMs && heureDispo <= finFenetreMs) {
+                if (heureDispo < retourLePlusTot) {
+                    retourLePlusTot = heureDispo;
+                }
+            }
+        }
+
+        if (retourLePlusTot != Long.MAX_VALUE) {
+            meilleurDepartMs = retourLePlusTot;
+            System.out.println("   ⏱️ Départ commun décalé à " + new Timestamp(meilleurDepartMs)
+                    + " (retour voiture pendant la fenêtre)");
+        }
+
+        return new Timestamp(meilleurDepartMs);
     }
 
     /**

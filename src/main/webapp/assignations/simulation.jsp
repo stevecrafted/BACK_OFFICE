@@ -1,6 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ page import="org.example.Model.*" %>
 <%@ page import="org.example.DAO.LieuDAO" %>
+<%@ page import="org.example.DAO.ReservationDAO" %>
 <%@ page import="java.util.*" %>
 <%@ page import="java.text.SimpleDateFormat" %>
 <%@ page import="java.text.DecimalFormat" %>
@@ -292,6 +293,7 @@
 
                     <%
                         LieuDAO lieuDAOEx = new LieuDAO();
+                        ReservationDAO reservationDAOEx = new ReservationDAO();
                         SimpleDateFormat sdfEx = new SimpleDateFormat("dd/MM/yyyy HH:mm");
                         DecimalFormat dfEx = new DecimalFormat("#.##");
                         
@@ -362,8 +364,10 @@
                                         <% for (Reservation rEx : saEx.getReservations()) { 
                                             Lieu lieuEx = lieuDAOEx.findById(rEx.getIdLieu());
                                             String lieuNomEx = lieuEx != null ? lieuEx.getLibelle() : "Lieu #" + rEx.getIdLieu();
+                                            Reservation rOriginaleEx = reservationDAOEx.findById(rEx.getId());
+                                            int totalClientEx = rOriginaleEx != null ? rOriginaleEx.getNbPassager() : rEx.getNbPassager();
                                         %>
-                                            #<%= rEx.getId() %>: <%= rEx.getIdClient() %> → <%= lieuNomEx %> (<%= rEx.getNbPassager() %>p)<br>
+                                            #<%= rEx.getId() %>: <%= rEx.getIdClient() %> → <%= lieuNomEx %> (<%= rEx.getNbPassager() %>/<%= totalClientEx %>p)<br>
                                         <% } %>
                                     </td>
                                     <td><strong><%= totalPEx %></strong></td>
@@ -460,6 +464,7 @@
                             <tbody>
                                 <%
                                     LieuDAO lieuDAO = new LieuDAO();
+                                    ReservationDAO reservationDAO = new ReservationDAO();
                                     SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
                                     DecimalFormat df = new DecimalFormat("#.##");
                                     for (SimulationAssignation sa : entry.getValue()) {
@@ -498,8 +503,10 @@
                                         <% for (Reservation r : sa.getReservations()) { 
                                             Lieu lieu = lieuDAO.findById(r.getIdLieu());
                                             String lieuNom = lieu != null ? lieu.getLibelle() : "Lieu #" + r.getIdLieu();
+                                            Reservation rOriginale = reservationDAO.findById(r.getId());
+                                            int totalClient = rOriginale != null ? rOriginale.getNbPassager() : r.getNbPassager();
                                         %>
-                                            #<%= r.getId() %>: <%= r.getIdClient() %> → <%= lieuNom %> (<%= r.getNbPassager() %>p)<br>
+                                            #<%= r.getId() %>: <%= r.getIdClient() %> → <%= lieuNom %> (<%= r.getNbPassager() %>/<%= totalClient %>p)<br>
                                         <% } %>
                                     </td>
                                     <td><strong><%= totalPassagers %></strong></td>
