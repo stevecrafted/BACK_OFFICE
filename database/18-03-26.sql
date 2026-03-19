@@ -100,7 +100,7 @@ CREATE TABLE token_validite(
 
 -- Voitures (carburant: E=Essence,  D=Diesel)
 INSERT INTO Voiture (Capacite, ref_, carburant) VALUES (12, 'vehicule1', 'D');
-INSERT INTO Voiture (Capacite, ref_, carburant) VALUES (12, 'vehicule2', 'E');
+INSERT INTO Voiture (Capacite, ref_, carburant) VALUES (2, 'vehicule2', 'E');
 
 INSERT INTO Voiture (Capacite, ref_, carburant) VALUES (5, 'vehicule3', 'D');
 INSERT INTO Voiture (Capacite, ref_, carburant) VALUES (5, 'vehicule4', 'E');
