@@ -1,10 +1,7 @@
 -- ========================================
 -- SCRIPT DE RÉINITIALISATION COMPLÈTE
--- Date: 10-03-2026
+-- Date: 18-03-2026
 -- ========================================
--- Modifications:
--- - Table Carburant supprimée, carburant directement dans Voiture (E/H/D)
--- - Table hotel remplacée par lieu (id, code, libelle, type)
 
 -- ========================================
 -- 1. SUPPRESSION DE TOUTES LES TABLES
@@ -14,7 +11,6 @@ DROP TABLE IF EXISTS distance CASCADE;
 DROP TABLE IF EXISTS reservations CASCADE;
 DROP TABLE IF EXISTS Voiture CASCADE;
 DROP TABLE IF EXISTS Carburant CASCADE;
-DROP TABLE IF EXISTS hotel CASCADE;
 DROP TABLE IF EXISTS lieu CASCADE;
 DROP TABLE IF EXISTS token_validite CASCADE;
 DROP TABLE IF EXISTS parametre CASCADE;
@@ -32,7 +28,6 @@ CREATE TABLE Voiture(
    PRIMARY KEY(idVoiture)
 );
 
--- Table Lieu (remplace hotel)
 CREATE TABLE lieu(
     id SERIAL,
     code VARCHAR(50) NOT NULL,
@@ -100,15 +95,13 @@ INSERT INTO Voiture (Capacite, ref_, carburant) VALUES (12, 'vehicule2', 'E');
 INSERT INTO Voiture (Capacite, ref_, carburant) VALUES (5, 'vehicule3', 'D');
 INSERT INTO Voiture (Capacite, ref_, carburant) VALUES (5, 'vehicule4', 'E');
 
--- Lieux (1 aeroport + 4 hotels)
 INSERT INTO lieu (code, libelle, type) VALUES ('AER', 'Aéroport Ivato', 'aeroport');
 INSERT INTO lieu (code, libelle, type) VALUES ('HOT', 'hotel1', 'hotel');  
 INSERT INTO lieu (code, libelle, type) VALUES ('HOT', 'hotel2', 'hotel');  
 
--- Distances entre lieux (id_from < id_to)
--- id=1: Aéroport, id=2: Colbert, id=3: Novotel, id=4: Ibis, id=5: Lokanga
 INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 2, 5);
 INSERT INTO distance (id_from, id_to, kilometer) VALUES (2, 3, 10);
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 3, 15);
 
 INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client1', 7, '2026-03-18 09:00:00');
 INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client2', 11, '2026-03-18 09:00:00');
@@ -117,7 +110,6 @@ INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2
 INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client5', 2, '2026-03-18 09:00:00');
 INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client6', 20, '2026-03-18 09:00:00');
 
--- Paramètres système
 INSERT INTO parametre (nom, valeur) VALUES ('app_version', '2.0.0');
 INSERT INTO parametre (nom, valeur) VALUES ('maintenance_mode', 'false');
 INSERT INTO parametre (nom, valeur) VALUES ('max_reservations_per_day', '100');
