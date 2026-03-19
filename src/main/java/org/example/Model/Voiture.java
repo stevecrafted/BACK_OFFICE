@@ -1,10 +1,13 @@
 package org.example.Model;
 
+import java.sql.Time;
+
 public class Voiture {
     private int idVoiture;
     private int capacite;
     private String ref;
     private String carburant; // E=Essence, H=Hybride, D=Diesel
+    private Time disponibilite;
 
     // Constructeurs
     public Voiture() {}
@@ -13,6 +16,13 @@ public class Voiture {
         this.capacite = capacite;
         this.ref = ref;
         this.carburant = carburant;
+    }
+
+    public Voiture(int capacite, String ref, String carburant, Time disponibilite) {
+        this.capacite = capacite;
+        this.ref = ref;
+        this.carburant = carburant;
+        this.disponibilite = disponibilite;
     }
 
     // Getters et Setters
@@ -27,6 +37,9 @@ public class Voiture {
 
     public String getCarburant() { return carburant; }
     public void setCarburant(String carburant) { this.carburant = carburant; }
+
+    public Time getDisponibilite() { return disponibilite; }
+    public void setDisponibilite(Time disponibilite) { this.disponibilite = disponibilite; }
 
     public String getCarburantLibelle() {
         if (carburant == null) return "";
@@ -45,6 +58,7 @@ public class Voiture {
                 ", capacite=" + capacite +
                 ", ref='" + ref + '\'' +
                 ", carburant='" + carburant + '\'' +
+                ", disponibilite=" + disponibilite +
                 '}';
     }
 }

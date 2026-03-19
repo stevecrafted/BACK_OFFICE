@@ -26,6 +26,7 @@ CREATE TABLE Voiture(
    Capacite INTEGER,
    ref_ VARCHAR(50),
    carburant CHAR(1) NOT NULL CHECK (carburant IN ('E', 'H', 'D')),
+    disponibilite TIME NOT NULL DEFAULT '00:00:00',
    PRIMARY KEY(idVoiture)
 );
 
@@ -99,11 +100,11 @@ CREATE TABLE token_validite(
 -- ========================================
 
 -- Voitures (carburant: E=Essence,  D=Diesel)
-INSERT INTO Voiture (Capacite, ref_, carburant) VALUES (12, 'vehicule1', 'D');
-INSERT INTO Voiture (Capacite, ref_, carburant) VALUES (2, 'vehicule2', 'E');
+INSERT INTO Voiture (Capacite, ref_, carburant, disponibilite) VALUES (12, 'vehicule1', 'D', '00:00:00');
+INSERT INTO Voiture (Capacite, ref_, carburant, disponibilite) VALUES (2, 'vehicule2', 'E', '09:05:00');
 
-INSERT INTO Voiture (Capacite, ref_, carburant) VALUES (5, 'vehicule3', 'D');
-INSERT INTO Voiture (Capacite, ref_, carburant) VALUES (5, 'vehicule4', 'E');
+INSERT INTO Voiture (Capacite, ref_, carburant, disponibilite) VALUES (5, 'vehicule3', 'D', '00:00:00');
+INSERT INTO Voiture (Capacite, ref_, carburant, disponibilite) VALUES (5, 'vehicule4', 'E', '09:40:00');
 
 INSERT INTO lieu (code, libelle, type) VALUES ('AER', 'Aéroport Ivato', 'aeroport');
 INSERT INTO lieu (code, libelle, type) VALUES ('HOT', 'hotel1', 'hotel');  
@@ -125,3 +126,5 @@ INSERT INTO parametre (nom, valeur) VALUES ('maintenance_mode', 'false');
 INSERT INTO parametre (nom, valeur) VALUES ('max_reservations_per_day', '100');
 INSERT INTO parametre (nom, valeur) VALUES ('VM', '60'); -- Vitesse Moyenne en km/h
 INSERT INTO parametre (nom, valeur) VALUES ('temps_attente', '10'); -- Temps d'attente en minutes pour le groupement des vagues
+
+INSERT INTO assignation (id_voiture, date_heure_depart, date_heure_arrivee) VALUES (1, '2026-03-18 00:00:00', '2026-03-18 09:05:00');
