@@ -1,5 +1,7 @@
 package org.example.Util;
 
+import org.example.DAO.DistanceDAO;
+import org.example.DAO.LieuDAO;
 import org.example.Model.*;
 
 import java.sql.Timestamp;
@@ -26,11 +28,13 @@ public class UtilSimulation {
 
     /**
      * Trouver meilleur voiture pour cet reservation
-     * 1. Séparer en 3 listes: capacité > nbPassagers, capacité == nbPassagers, capacité < nbPassagers
+     * 1. Séparer en 3 listes: capacité > nbPassagers, capacité == nbPassagers,
+     * capacité < nbPassagers
      * 2. Priorité: égal > (sup + inf par écart)
      * 3. Écart minimal, puis nombre de trajets min, puis D > E
      */
-    public static Voiture trouverMeilleurVoiture(Reservation reservation, List<Voiture> voituresDisponibles, Map<Integer, Integer> compteurTrajetsJour) {
+    public static Voiture trouverMeilleurVoiture(Reservation reservation, List<Voiture> voituresDisponibles,
+            Map<Integer, Integer> compteurTrajetsJour) {
 
         if (voituresDisponibles == null || voituresDisponibles.isEmpty()) {
             return null;
@@ -38,9 +42,9 @@ public class UtilSimulation {
 
         int nbPassagers = reservation.getNbPassager();
 
-        List<Voiture> listeVoitureSupCapacite = new ArrayList<>();   // capacité > nbPassagers
-        List<Voiture> listeVoitureEgalCapacite = new ArrayList<>();  // capacité == nbPassagers
-        List<Voiture> listeVoitureInfCapacite = new ArrayList<>();   // capacité < nbPassagers
+        List<Voiture> listeVoitureSupCapacite = new ArrayList<>(); // capacité > nbPassagers
+        List<Voiture> listeVoitureEgalCapacite = new ArrayList<>(); // capacité == nbPassagers
+        List<Voiture> listeVoitureInfCapacite = new ArrayList<>(); // capacité < nbPassagers
 
         // Séparer les voitures en 3 listes
         for (Voiture voiture : voituresDisponibles) {
@@ -62,7 +66,8 @@ public class UtilSimulation {
         if (listeVoitureEgalCapacite.size() > 0 && listeVoitureEgalCapacite.size() == 1) {
             return listeVoitureEgalCapacite.get(0);
         } else if (listeVoitureEgalCapacite.size() > 1) {
-            Voiture voiture = trouverVoitureCarburantNbrTrajet(listeVoitureEgalCapacite, compteurTrajetsJour, reservation.getNbPassager());
+            Voiture voiture = trouverVoitureCarburantNbrTrajet(listeVoitureEgalCapacite, compteurTrajetsJour,
+                    reservation.getNbPassager());
             return voiture;
         }
 
@@ -108,7 +113,8 @@ public class UtilSimulation {
     /**
      * Départager les voitures par nombre de trajets puis carburant (D > E)
      */
-    public static Voiture trouverVoitureCarburantNbrTrajet(List<Voiture> listeCandidats, Map<Integer, Integer> compteurTrajetsJour, Integer nbPassagers) {
+    public static Voiture trouverVoitureCarburantNbrTrajet(List<Voiture> listeCandidats,
+            Map<Integer, Integer> compteurTrajetsJour, Integer nbPassagers) {
         // Trouver l'écart minimal
         int ecartMin = Integer.MAX_VALUE;
         for (Voiture v : listeCandidats) {
@@ -169,22 +175,24 @@ public class UtilSimulation {
     }
 
     /**
-     * Trouve la réservation qui correspond le mieux au reste de places dans la voiture
+     * Trouve la réservation qui correspond le mieux au reste de places dans la
+     * voiture
      * 1. D'abord chercher les égaux (nbPassagers == placesRestantes)
      * 2. Sinon, regarder l'écart minimal (sup ou inf)
      *
      * @param reservationsATraiter Liste des réservations disponibles
-     * @param placesRestantes Nombre de places restantes dans la voiture
+     * @param placesRestantes      Nombre de places restantes dans la voiture
      * @return La réservation avec l'écart minimal, ou null si liste vide
      */
-    public static Reservation trouverReservationPourRemplissage(List<Reservation> reservationsATraiter, int placesRestantes) {
+    public static Reservation trouverReservationPourRemplissage(List<Reservation> reservationsATraiter,
+            int placesRestantes) {
         if (reservationsATraiter == null || reservationsATraiter.isEmpty() || placesRestantes <= 0) {
             return null;
         }
 
         List<Reservation> listeReservationEgal = new ArrayList<>();
-        List<Reservation> listeReservationSup = new ArrayList<>();  // nbPassagers > placesRestantes
-        List<Reservation> listeReservationInf = new ArrayList<>();  // nbPassagers < placesRestantes
+        List<Reservation> listeReservationSup = new ArrayList<>(); // nbPassagers > placesRestantes
+        List<Reservation> listeReservationInf = new ArrayList<>(); // nbPassagers < placesRestantes
 
         // Séparer en 3 listes
         for (Reservation r : reservationsATraiter) {
@@ -233,14 +241,17 @@ public class UtilSimulation {
     /**
      * Regroupe les réservations par vague selon le temps d'attente.
      *
-     * Une vague = fenêtre de temps [première_réservation, première_réservation + temps_attente]
+     * Une vague = fenêtre de temps [première_réservation, première_réservation +
+     * temps_attente]
      * Toutes les réservations dans cette fenêtre font partie de la même vague.
      *
-     * @param reservations Liste des réservations à regrouper
+     * @param reservations        Liste des réservations à regrouper
      * @param tempsAttenteMinutes Temps d'attente en minutes (ex: 30)
-     * @return Map avec clé = "YYYY-MM-DD HH:MM" et valeur = liste des réservations de cette vague
+     * @return Map avec clé = "YYYY-MM-DD HH:MM" et valeur = liste des réservations
+     *         de cette vague
      */
-    public static Map<String, List<Reservation>> regrouperParVague(List<Reservation> reservations, int tempsAttenteMinutes) {
+    public static Map<String, List<Reservation>> regrouperParVague(List<Reservation> reservations,
+            int tempsAttenteMinutes) {
         Map<String, List<Reservation>> vagues = new LinkedHashMap<>();
 
         if (reservations == null || reservations.isEmpty()) {
@@ -287,11 +298,105 @@ public class UtilSimulation {
     /**
      * Tronque un Timestamp aux minutes (met les secondes et millisecondes à 0)
      */
-    private static long tronquerAuxMinutes(Timestamp ts) {
+    public static long tronquerAuxMinutes(Timestamp ts) {
         Calendar cal = Calendar.getInstance();
         cal.setTimeInMillis(ts.getTime());
         cal.set(Calendar.SECOND, 0);
         cal.set(Calendar.MILLISECOND, 0);
         return cal.getTimeInMillis();
+    }
+
+    public static void AssignationOptimal(SimulationAssignation simulationAssignation, List<Reservation> reservationsVague) {
+        // Remplissage optimal : chercher des réservations qui correspondent au reste de
+        // places
+        while (simulationAssignation.getPlacesRestantes() > 0 && !reservationsVague.isEmpty()) {
+            Reservation reservationRemplissage = UtilSimulation.trouverReservationPourRemplissage(
+                    reservationsVague,
+                    simulationAssignation.getPlacesRestantes());
+
+            if (reservationRemplissage == null) {
+                break;
+            }
+
+            // Vérifier que la réservation peut rentrer
+            if (reservationRemplissage.getNbPassager() > simulationAssignation.getPlacesRestantes()) {
+                break;
+            }
+
+            simulationAssignation.ajouterReservation(reservationRemplissage);
+            reservationsVague.remove(reservationRemplissage);
+        }
+    }
+
+    /**
+     * Calcule l'itinéraire, l'heure de départ et l'heure d'arrivée pour une assignation.
+     *
+     * - Heure de départ = finFenetreVague (la voiture part quand l'attente est terminée)
+     * - Itinéraire = Aéroport → Hôtel1 → Hôtel2 → ...
+     * - Heure d'arrivée = heure de départ + durée totale
+     *
+     * @param assignation      L'assignation à traiter
+     * @param aeroport         Le lieu de départ (aéroport)
+     * @param finFenetreVague  L'heure de fin de la fenêtre de vague
+     * @param distanceDAO      DAO pour récupérer les distances
+     * @param lieuDAO          DAO pour récupérer les lieux
+     * @param vitesseMoyenneKmH Vitesse moyenne en km/h
+     */
+    public static void calculerItineraire(SimulationAssignation assignation, Lieu aeroport,
+            Timestamp finFenetreVague, DistanceDAO distanceDAO, LieuDAO lieuDAO, double vitesseMoyenneKmH) {
+
+        if (assignation == null || assignation.getReservations().isEmpty()) {
+            return;
+        }
+
+        List<EtapeItineraire> itineraire = new ArrayList<>();
+        int lieuDepartId = aeroport.getId();
+        String lieuDepartNom = aeroport.getLibelle();
+        int ordre = 1;
+
+        // Récupérer tous les hôtels des réservations (sans doublons, garder l'ordre)
+        List<Integer> hotelsIds = new ArrayList<>();
+        for (Reservation r : assignation.getReservations()) {
+            if (!hotelsIds.contains(r.getIdLieu())) {
+                hotelsIds.add(r.getIdLieu());
+            }
+        }
+
+        // Construire l'itinéraire: Aéroport → Hôtel1 → Hôtel2 → ...
+        for (Integer hotelId : hotelsIds) {
+            Lieu lieuArrivee = lieuDAO.findById(hotelId);
+            if (lieuArrivee == null) {
+                continue;
+            }
+
+            // Récupérer la distance
+            Double distanceKm = distanceDAO.getDistance(lieuDepartId, hotelId);
+            if (distanceKm == null) {
+                distanceKm = 0.0;
+            }
+
+            // Calculer la durée en minutes: distance (km) / vitesse (km/h) * 60 (min)
+            double dureeMinutes = (distanceKm / vitesseMoyenneKmH) * 60.0;
+
+            // Créer l'étape
+            EtapeItineraire etape = new EtapeItineraire(ordre, lieuDepartNom, lieuArrivee.getLibelle(), distanceKm, dureeMinutes);
+            itineraire.add(etape);
+
+            // Le prochain départ est l'arrivée actuelle
+            lieuDepartId = hotelId;
+            lieuDepartNom = lieuArrivee.getLibelle();
+            ordre++;
+        }
+
+        // Mettre à jour l'assignation
+        assignation.setItineraire(itineraire);
+        assignation.setFinFenetreVague(finFenetreVague);
+        assignation.setDateHeureDepart(finFenetreVague);
+
+        // Calculer l'heure d'arrivée
+        double dureeTotaleMinutes = assignation.getDureeTotaleMinutes();
+        long dureeTotaleMs = (long) (dureeTotaleMinutes * 60 * 1000);
+        Timestamp heureArrivee = new Timestamp(finFenetreVague.getTime() + dureeTotaleMs);
+        assignation.setDateHeureArrivee(heureArrivee);
     }
 }
