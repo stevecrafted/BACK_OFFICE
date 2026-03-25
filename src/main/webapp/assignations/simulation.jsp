@@ -241,7 +241,8 @@
 </head>
 <body>
     <div class="container">
-        <h1>🎯 Simulation d'Assignation de Voitures</h1>
+        <h1>🎯 ETU003861   ETU003349    ETU003167
+        </h1>
 
         <%
             String error = (String) request.getAttribute("error");
