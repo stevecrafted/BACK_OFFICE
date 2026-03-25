@@ -1,0 +1,231 @@
+package org.example.Util;
+
+import org.example.Model.*;
+
+import java.util.*;
+
+public class UtilSimulation {
+
+    /**
+     * Trouve la réservation avec le plus grand nombre de passagers
+     */
+    public static Reservation trouverReservationATraiter(List<Reservation> reservationsATraiter) {
+        if (reservationsATraiter == null || reservationsATraiter.isEmpty()) {
+            return null;
+        }
+
+        Reservation reservationMax = reservationsATraiter.get(0);
+        for (int i = 1; i < reservationsATraiter.size(); i++) {
+            if (reservationsATraiter.get(i).getNbPassager() > reservationMax.getNbPassager()) {
+                reservationMax = reservationsATraiter.get(i);
+            }
+        }
+        return reservationMax;
+    }
+
+    /**
+     * Trouver meilleur voiture pour cet reservation
+     * 1. Séparer en 3 listes: capacité > nbPassagers, capacité == nbPassagers, capacité < nbPassagers
+     * 2. Priorité: égal > (sup + inf par écart)
+     * 3. Écart minimal, puis nombre de trajets min, puis D > E
+     */
+    public static Voiture trouverMeilleurVoiture(Reservation reservation, List<Voiture> voituresDisponibles, Map<Integer, Integer> compteurTrajetsJour) {
+
+        if (voituresDisponibles == null || voituresDisponibles.isEmpty()) {
+            return null;
+        }
+
+        int nbPassagers = reservation.getNbPassager();
+
+        List<Voiture> listeVoitureSupCapacite = new ArrayList<>();   // capacité > nbPassagers
+        List<Voiture> listeVoitureEgalCapacite = new ArrayList<>();  // capacité == nbPassagers
+        List<Voiture> listeVoitureInfCapacite = new ArrayList<>();   // capacité < nbPassagers
+
+        // Séparer les voitures en 3 listes
+        for (Voiture voiture : voituresDisponibles) {
+
+            if (voiture.getDisponibilite().after(reservation.getDateHeure())) {
+                continue;
+            }
+
+            if (voiture.getCapacite() == nbPassagers) {
+                listeVoitureEgalCapacite.add(voiture);
+            } else if (voiture.getCapacite() > nbPassagers) {
+                listeVoitureSupCapacite.add(voiture);
+            } else {
+                listeVoitureInfCapacite.add(voiture);
+            }
+        }
+
+        // Priorité ny egal
+        if (listeVoitureEgalCapacite.size() > 0 && listeVoitureEgalCapacite.size() == 1) {
+            return listeVoitureEgalCapacite.get(0);
+        } else if (listeVoitureEgalCapacite.size() > 1) {
+            Voiture voiture = trouverVoitureCarburantNbrTrajet(listeVoitureEgalCapacite, compteurTrajetsJour, reservation.getNbPassager());
+            return voiture;
+        }
+
+        // Traiter sup et inf ensemble (pas de priorité entre eux)
+        // Fusionner les deux listes
+        List<Voiture> listeCandidats = new ArrayList<>();
+        listeCandidats.addAll(listeVoitureSupCapacite);
+        listeCandidats.addAll(listeVoitureInfCapacite);
+
+        if (listeCandidats.isEmpty()) {
+            return null;
+        }
+
+        if (listeCandidats.size() == 1) {
+            return listeCandidats.get(0);
+        }
+
+        // Calculer l'écart pour chaque voiture et trouver l'écart minimal
+        int ecartMin = Integer.MAX_VALUE;
+        for (Voiture v : listeCandidats) {
+            int ecart = Math.abs(v.getCapacite() - nbPassagers);
+            if (ecart < ecartMin) {
+                ecartMin = ecart;
+            }
+        }
+
+        // Filtrer les voitures avec l'écart minimal
+        List<Voiture> voituresEcartMin = new ArrayList<>();
+        for (Voiture v : listeCandidats) {
+            if (Math.abs(v.getCapacite() - nbPassagers) == ecartMin) {
+                voituresEcartMin.add(v);
+            }
+        }
+
+        if (voituresEcartMin.size() == 1) {
+            return voituresEcartMin.get(0);
+        }
+
+        // Si égalité d'écart, regarder le carburant et nombre de trajets
+        return trouverVoitureCarburantNbrTrajet(voituresEcartMin, compteurTrajetsJour, nbPassagers);
+    }
+
+    /**
+     * Départager les voitures par nombre de trajets puis carburant (D > E)
+     */
+    public static Voiture trouverVoitureCarburantNbrTrajet(List<Voiture> listeCandidats, Map<Integer, Integer> compteurTrajetsJour, Integer nbPassagers) {
+        // Trouver l'écart minimal
+        int ecartMin = Integer.MAX_VALUE;
+        for (Voiture v : listeCandidats) {
+            int ecart = Math.abs(v.getCapacite() - nbPassagers);
+            if (ecart < ecartMin) {
+                ecartMin = ecart;
+            }
+        }
+
+        // Filtrer les voitures avec l'écart minimal
+        List<Voiture> voituresEcartMin = new ArrayList<>();
+        for (Voiture v : listeCandidats) {
+            if (Math.abs(v.getCapacite() - nbPassagers) == ecartMin) {
+                voituresEcartMin.add(v);
+            }
+        }
+
+        if (voituresEcartMin.size() == 1) {
+            return voituresEcartMin.get(0);
+        }
+
+        // Trouver le nombre de trajets minimum
+        int trajetsMin = Integer.MAX_VALUE;
+        for (Voiture v : voituresEcartMin) {
+            int trajets = compteurTrajetsJour != null ? compteurTrajetsJour.getOrDefault(v.getIdVoiture(), 0) : 0;
+            if (trajets < trajetsMin) {
+                trajetsMin = trajets;
+            }
+        }
+
+        // Filtrer les voitures avec le nombre de trajets minimum
+        List<Voiture> voituresTrajetsMin = new ArrayList<>();
+        for (Voiture v : voituresEcartMin) {
+            int trajets = compteurTrajetsJour != null ? compteurTrajetsJour.getOrDefault(v.getIdVoiture(), 0) : 0;
+            if (trajets == trajetsMin) {
+                voituresTrajetsMin.add(v);
+            }
+        }
+
+        if (voituresTrajetsMin.size() == 1) {
+            return voituresTrajetsMin.get(0);
+        }
+
+        // Priorité carburant: D > E (pas de H)
+        for (Voiture v : voituresTrajetsMin) {
+            if ("D".equals(v.getCarburant())) {
+                return v;
+            }
+        }
+        for (Voiture v : voituresTrajetsMin) {
+            if ("E".equals(v.getCarburant())) {
+                return v;
+            }
+        }
+
+        // Retourner la première si aucun critère ne départage
+        return voituresTrajetsMin.isEmpty() ? null : voituresTrajetsMin.get(0);
+    }
+
+    /**
+     * Trouve la réservation qui correspond le mieux au reste de places dans la voiture
+     * 1. D'abord chercher les égaux (nbPassagers == placesRestantes)
+     * 2. Sinon, regarder l'écart minimal (sup ou inf)
+     *
+     * @param reservationsATraiter Liste des réservations disponibles
+     * @param placesRestantes Nombre de places restantes dans la voiture
+     * @return La réservation avec l'écart minimal, ou null si liste vide
+     */
+    public static Reservation trouverReservationPourRemplissage(List<Reservation> reservationsATraiter, int placesRestantes) {
+        if (reservationsATraiter == null || reservationsATraiter.isEmpty() || placesRestantes <= 0) {
+            return null;
+        }
+
+        List<Reservation> listeReservationEgal = new ArrayList<>();
+        List<Reservation> listeReservationSup = new ArrayList<>();  // nbPassagers > placesRestantes
+        List<Reservation> listeReservationInf = new ArrayList<>();  // nbPassagers < placesRestantes
+
+        // Séparer en 3 listes
+        for (Reservation r : reservationsATraiter) {
+            if (r.getNbPassager() == placesRestantes) {
+                listeReservationEgal.add(r);
+            } else if (r.getNbPassager() > placesRestantes) {
+                listeReservationSup.add(r);
+            } else {
+                listeReservationInf.add(r);
+            }
+        }
+
+        // Priorité aux égaux
+        if (!listeReservationEgal.isEmpty()) {
+            return listeReservationEgal.get(0);
+        }
+
+        // Fusionner sup et inf, puis trouver l'écart minimal
+        List<Reservation> listeCandidats = new ArrayList<>();
+        listeCandidats.addAll(listeReservationSup);
+        listeCandidats.addAll(listeReservationInf);
+
+        if (listeCandidats.isEmpty()) {
+            return null;
+        }
+
+        if (listeCandidats.size() == 1) {
+            return listeCandidats.get(0);
+        }
+
+        // Trouver l'écart minimal
+        Reservation meilleureReservation = null;
+        int ecartMin = Integer.MAX_VALUE;
+
+        for (Reservation r : listeCandidats) {
+            int ecart = Math.abs(r.getNbPassager() - placesRestantes);
+            if (ecart < ecartMin) {
+                ecartMin = ecart;
+                meilleureReservation = r;
+            }
+        }
+
+        return meilleureReservation;
+    }
+}
