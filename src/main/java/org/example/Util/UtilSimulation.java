@@ -34,7 +34,8 @@ public class UtilSimulation {
      * 3. Écart minimal, puis nombre de trajets min, puis D > E
      */
     public static Voiture trouverMeilleurVoiture(Reservation reservation, List<Voiture> voituresDisponibles,
-            Map<Integer, Integer> compteurTrajetsJour) {
+            Map<Integer, Integer> compteurTrajetsJour, Map<Integer, Timestamp> voituresEnTrajet,
+            Timestamp finFenetreVague) {
 
         if (voituresDisponibles == null || voituresDisponibles.isEmpty()) {
             return null;
@@ -49,7 +50,17 @@ public class UtilSimulation {
         // Séparer les voitures en 3 listes
         for (Voiture voiture : voituresDisponibles) {
 
-            if (voiture.getDisponibilite().after(reservation.getDateHeure())) {
+            // Calculer la disponibilité réelle (max entre disponibilité originale et heure de retour)
+            Timestamp disponibiliteReelle = Timestamp.valueOf(voiture.getDisponibilite().toString());
+            if (voituresEnTrajet != null && voituresEnTrajet.containsKey(voiture.getIdVoiture())) {
+                Timestamp heureRetour = voituresEnTrajet.get(voiture.getIdVoiture());
+                if (heureRetour != null && heureRetour.after(disponibiliteReelle)) {
+                    disponibiliteReelle = heureRetour;
+                }
+            }
+
+            // Vérifier si la voiture est disponible avant la fin de la fenêtre de vague
+            if (disponibiliteReelle.after(finFenetreVague)) {
                 continue;
             }
 
@@ -306,6 +317,48 @@ public class UtilSimulation {
         return cal.getTimeInMillis();
     }
 
+    /**
+     * Compare deux voitures pour déterminer laquelle est meilleure pour un nombre de passagers donné.
+     * Critères de comparaison (dans l'ordre):
+     * 1. Écart minimal avec le nombre de passagers
+     * 2. Nombre de trajets minimal
+     * 3. Carburant: D > E
+     *
+     * @return true si nouvelleVoiture est meilleure que voitureActuelle
+     */
+    public static boolean estMeilleureVoiture(Voiture nouvelleVoiture, Voiture voitureActuelle,
+            int nbPassagers, Map<Integer, Integer> compteurTrajetsJour) {
+
+        int ecartNouvelle = Math.abs(nouvelleVoiture.getCapacite() - nbPassagers);
+        int ecartActuelle = Math.abs(voitureActuelle.getCapacite() - nbPassagers);
+
+        // 1. Comparer l'écart
+        if (ecartNouvelle < ecartActuelle) {
+            return true;
+        }
+        if (ecartNouvelle > ecartActuelle) {
+            return false;
+        }
+
+        // Écart égal → comparer nombre de trajets
+        int trajetsNouvelle = compteurTrajetsJour != null ? compteurTrajetsJour.getOrDefault(nouvelleVoiture.getIdVoiture(), 0) : 0;
+        int trajetsActuelle = compteurTrajetsJour != null ? compteurTrajetsJour.getOrDefault(voitureActuelle.getIdVoiture(), 0) : 0;
+
+        if (trajetsNouvelle < trajetsActuelle) {
+            return true;
+        }
+        if (trajetsNouvelle > trajetsActuelle) {
+            return false;
+        }
+
+        // Trajets égaux → comparer carburant (D > E)
+        if ("D".equals(nouvelleVoiture.getCarburant()) && !"D".equals(voitureActuelle.getCarburant())) {
+            return true;
+        }
+
+        return false;
+    }
+
     public static void AssignationOptimal(SimulationAssignation simulationAssignation, List<Reservation> reservationsVague) {
         // Remplissage optimal : chercher des réservations qui correspondent au reste de
         // places
@@ -331,19 +384,20 @@ public class UtilSimulation {
     /**
      * Calcule l'itinéraire, l'heure de départ et l'heure d'arrivée pour une assignation.
      *
-     * - Heure de départ = finFenetreVague (la voiture part quand l'attente est terminée)
+     * - Heure de départ = heureDepart (passée en paramètre)
      * - Itinéraire = Aéroport → Hôtel1 → Hôtel2 → ...
      * - Heure d'arrivée = heure de départ + durée totale
      *
-     * @param assignation      L'assignation à traiter
-     * @param aeroport         Le lieu de départ (aéroport)
-     * @param finFenetreVague  L'heure de fin de la fenêtre de vague
-     * @param distanceDAO      DAO pour récupérer les distances
-     * @param lieuDAO          DAO pour récupérer les lieux
+     * @param assignation       L'assignation à traiter
+     * @param aeroport          Le lieu de départ (aéroport)
+     * @param heureDepart       L'heure de départ de la voiture
+     * @param finFenetreVague   L'heure de fin de la fenêtre de vague (pour info)
+     * @param distanceDAO       DAO pour récupérer les distances
+     * @param lieuDAO           DAO pour récupérer les lieux
      * @param vitesseMoyenneKmH Vitesse moyenne en km/h
      */
     public static void calculerItineraire(SimulationAssignation assignation, Lieu aeroport,
-            Timestamp finFenetreVague, DistanceDAO distanceDAO, LieuDAO lieuDAO, double vitesseMoyenneKmH) {
+            Timestamp heureDepart, Timestamp finFenetreVague, DistanceDAO distanceDAO, LieuDAO lieuDAO, double vitesseMoyenneKmH) {
 
         if (assignation == null || assignation.getReservations().isEmpty()) {
             return;
@@ -391,12 +445,12 @@ public class UtilSimulation {
         // Mettre à jour l'assignation
         assignation.setItineraire(itineraire);
         assignation.setFinFenetreVague(finFenetreVague);
-        assignation.setDateHeureDepart(finFenetreVague);
+        assignation.setDateHeureDepart(heureDepart);
 
         // Calculer l'heure d'arrivée
         double dureeTotaleMinutes = assignation.getDureeTotaleMinutes();
         long dureeTotaleMs = (long) (dureeTotaleMinutes * 60 * 1000);
-        Timestamp heureArrivee = new Timestamp(finFenetreVague.getTime() + dureeTotaleMs);
+        Timestamp heureArrivee = new Timestamp(heureDepart.getTime() + dureeTotaleMs);
         assignation.setDateHeureArrivee(heureArrivee);
     }
 }
