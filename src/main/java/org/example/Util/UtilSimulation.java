@@ -2,6 +2,7 @@ package org.example.Util;
 
 import org.example.Model.*;
 
+import java.sql.Timestamp;
 import java.util.*;
 
 public class UtilSimulation {
@@ -227,5 +228,70 @@ public class UtilSimulation {
         }
 
         return meilleureReservation;
+    }
+
+    /**
+     * Regroupe les réservations par vague selon le temps d'attente.
+     *
+     * Une vague = fenêtre de temps [première_réservation, première_réservation + temps_attente]
+     * Toutes les réservations dans cette fenêtre font partie de la même vague.
+     *
+     * @param reservations Liste des réservations à regrouper
+     * @param tempsAttenteMinutes Temps d'attente en minutes (ex: 30)
+     * @return Map avec clé = "YYYY-MM-DD HH:MM" et valeur = liste des réservations de cette vague
+     */
+    public static Map<String, List<Reservation>> regrouperParVague(List<Reservation> reservations, int tempsAttenteMinutes) {
+        Map<String, List<Reservation>> vagues = new LinkedHashMap<>();
+
+        if (reservations == null || reservations.isEmpty()) {
+            return vagues;
+        }
+
+        long tempsAttenteMs = tempsAttenteMinutes * 60L * 1000L;
+
+        // Trier toutes les réservations par date_heure croissante
+        List<Reservation> triees = new ArrayList<>(reservations);
+        triees.sort((r1, r2) -> r1.getDateHeure().compareTo(r2.getDateHeure()));
+
+        int i = 0;
+
+        while (i < triees.size()) {
+            // La première réservation ouvre la fenêtre de traitement
+            Timestamp debutFenetre = triees.get(i).getDateHeure();
+            long debutMs = tronquerAuxMinutes(debutFenetre);
+            long finFenetreMs = debutMs + tempsAttenteMs;
+
+            // Collecter toutes les réservations dans [debutMs, finFenetreMs]
+            List<Reservation> vagueReservations = new ArrayList<>();
+
+            while (i < triees.size()) {
+                Timestamp heureCourante = triees.get(i).getDateHeure();
+                long heureCourtanteMs = tronquerAuxMinutes(heureCourante);
+
+                if (heureCourtanteMs <= finFenetreMs) {
+                    vagueReservations.add(triees.get(i));
+                    i++;
+                } else {
+                    break;
+                }
+            }
+
+            // La clé de la vague = début de la fenêtre (pour affichage)
+            String cleVague = String.format("%tF %tH:%tM", debutFenetre, debutFenetre, debutFenetre);
+            vagues.put(cleVague, vagueReservations);
+        }
+
+        return vagues;
+    }
+
+    /**
+     * Tronque un Timestamp aux minutes (met les secondes et millisecondes à 0)
+     */
+    private static long tronquerAuxMinutes(Timestamp ts) {
+        Calendar cal = Calendar.getInstance();
+        cal.setTimeInMillis(ts.getTime());
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        return cal.getTimeInMillis();
     }
 }

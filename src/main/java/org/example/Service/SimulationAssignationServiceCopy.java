@@ -8,7 +8,7 @@ import java.sql.Timestamp;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class SimulationAssignationService {
+public class SimulationAssignationServiceCopy {
 
     private ReservationDAO reservationDAO = new ReservationDAO();
     private VoitureDAO voitureDAO = new VoitureDAO();

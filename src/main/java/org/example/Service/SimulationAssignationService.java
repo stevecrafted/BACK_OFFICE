@@ -91,41 +91,86 @@ public class SimulationAssignationService {
                 reservationsATraiter.add(r);
             }
         }
+ 
+        if (reservationsATraiter.isEmpty()) {
+            System.out.println(" Toutes les réservations sont déjà assignées");
+            return resultat;
+        }
 
-        // ----
-        // Etape 2 : Traiter Reservation
-        for (int i = 0; i < reservationsATraiter.size(); i++) {
+        // ---
+        // Etape 2 : Regrouper les réservations par vague
+        int tempsAttenteMinutes = parametreDAO.getTempsAttente();
+        Map<String, List<Reservation>> vagues = UtilSimulation.regrouperParVague(reservationsATraiter, tempsAttenteMinutes);
 
-            Reservation reservation = UtilSimulation.trouverReservationATraiter(reservationsATraiter);
-            Voiture voiture = UtilSimulation.trouverMeilleurVoiture(reservation, toutesVoitures, null);
+        // ---
+        // Etape 3 : Traiter chaque vague
+        int numeroVague = 1;
+        for (Map.Entry<String, List<Reservation>> entry : vagues.entrySet()) {
+            String cleVague = entry.getKey();
+            List<Reservation> reservationsVague = new ArrayList<>(entry.getValue());
 
-            SimulationAssignation simulationAssignation = new SimulationAssignation(voiture, reservation.getDateHeure());
-            simulationAssignation.ajouterReservation(reservation);
+            System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            System.out.println(" VAGUE #" + numeroVague + " - " + cleVague);
+            System.out.println(" " + reservationsVague.size() + " réservation(s)");
+            System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
-            if ( simulationAssignation.getPlacesRestantes() > 0 ) {
+            // Liste des voitures disponibles pour cette vague (copie de toutesVoitures)
+            List<Voiture> voituresDisponiblesVague = new ArrayList<>(toutesVoitures);
 
-                // Remplissage optimal : chercher une réservation qui correspond au reste de places
-                while (simulationAssignation.getPlacesRestantes() > 0) {
+            // Traiter les réservations de cette vague
+            while (!reservationsVague.isEmpty()) {
+                // Trouver la réservation avec le plus de passagers
+                Reservation reservation = UtilSimulation.trouverReservationATraiter(reservationsVague);
+
+                if (reservation == null) {
+                    break;
+                }
+
+                // Trouver la meilleure voiture parmi celles encore disponibles
+                Voiture voiture = UtilSimulation.trouverMeilleurVoiture(reservation, voituresDisponiblesVague, null);
+                
+
+                if (voiture == null) {
+                    System.out.println(" Aucune voiture disponible pour réservation #" + reservation.getId());
+                    reservationsVague.remove(reservation);
+                    continue;
+                }
+
+                // Créer l'assignation
+                SimulationAssignation simulationAssignation = new SimulationAssignation(voiture, reservation.getDateHeure());
+                simulationAssignation.ajouterReservation(reservation);
+                reservationsVague.remove(reservation);
+
+                // Retirer la voiture de la liste des disponibles (elle est maintenant utilisée dans cette vague)
+                voituresDisponiblesVague.remove(voiture);
+ 
+                // Remplissage optimal : chercher des réservations qui correspondent au reste de places
+                while (simulationAssignation.getPlacesRestantes() > 0 && !reservationsVague.isEmpty()) {
                     Reservation reservationRemplissage = UtilSimulation.trouverReservationPourRemplissage(
-                        reservationsATraiter,
+                        reservationsVague,
                         simulationAssignation.getPlacesRestantes()
                     );
 
                     if (reservationRemplissage == null) {
-                        break; // Plus de réservation qui peut rentrer
+                        break;
                     }
 
-                    // Ajouter la réservation à l'assignation
+                    // Vérifier que la réservation peut rentrer
+                    if (reservationRemplissage.getNbPassager() > simulationAssignation.getPlacesRestantes()) {
+                        break;
+                    }
+
                     simulationAssignation.ajouterReservation(reservationRemplissage);
-                    reservationsATraiter.remove(reservationRemplissage);
+                    reservationsVague.remove(reservationRemplissage); 
                 }
+ 
+                // Ajouter au résultat
+                resultat.ajouterAssignation(simulationAssignation);
             }
 
-            // Supp Reservation deja traitee
-            reservationsATraiter.remove(reservation);
-
-        }
-
+            numeroVague++;
+            System.out.println();
+        } 
 
         return resultat;
     }
