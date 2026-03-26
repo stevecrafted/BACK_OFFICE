@@ -100,31 +100,31 @@ CREATE TABLE token_validite(
 -- ========================================
 
 -- Voitures (carburant: E=Essence,  D=Diesel)
-INSERT INTO Voiture (Capacite, ref_, carburant, disponibilite) VALUES (12, 'vehicule1', 'D', '00:00:00');
-INSERT INTO Voiture (Capacite, ref_, carburant, disponibilite) VALUES (2, 'vehicule2', 'E', '09:05:00');
-
-INSERT INTO Voiture (Capacite, ref_, carburant, disponibilite) VALUES (5, 'vehicule3', 'D', '00:00:00');
-INSERT INTO Voiture (Capacite, ref_, carburant, disponibilite) VALUES (5, 'vehicule4', 'E', '09:40:00');
+INSERT INTO Voiture (Capacite, ref_, carburant, disponibilite) VALUES (5, 'vehicule1', 'D', '09:00:00');
+INSERT INTO Voiture (Capacite, ref_, carburant, disponibilite) VALUES (5, 'vehicule2', 'E', '09:00:00');
+INSERT INTO Voiture (Capacite, ref_, carburant, disponibilite) VALUES (12, 'vehicule3', 'D', '08:00:00');
+INSERT INTO Voiture (Capacite, ref_, carburant, disponibilite) VALUES (9, 'vehicule4', 'D', '09:00:00');
+INSERT INTO Voiture (Capacite, ref_, carburant, disponibilite) VALUES (12, 'vehicule5', 'E', '13:00:00');
 
 INSERT INTO lieu (code, libelle, type) VALUES ('AER', 'Aéroport Ivato', 'aeroport');
 INSERT INTO lieu (code, libelle, type) VALUES ('HOT', 'hotel1', 'hotel');  
 INSERT INTO lieu (code, libelle, type) VALUES ('HOT', 'hotel2', 'hotel');  
 
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 2, 5);
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (2, 3, 10);
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 3, 10);
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 2, 90);
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 3, 35);
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (2, 3, 60);
 
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client1', 7, '2026-03-18 09:15:00');
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (3, 'client2', 11, '2026-03-18 09:00:00');
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client3', 3, '2026-03-18 09:30:00');
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client4', 1, '2026-03-18 09:45:00');
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client5', 2, '2026-03-18 09:00:00');
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client6', 20, '2026-03-18 09:15:00');
+INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client1', 7, '2026-03-19 09:00:00');
+INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (3, 'client2', 20, '2026-03-19 08:00:00');
+INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client3', 3, '2026-03-19 09:10:00');
+INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client4', 10, '2026-03-19 09:15:00');
+INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client5', 5, '2026-03-19 09:20:00');
+INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client6', 12, '2026-03-19 13:30:00');
 
 INSERT INTO parametre (nom, valeur) VALUES ('app_version', '2.0.0');
 INSERT INTO parametre (nom, valeur) VALUES ('maintenance_mode', 'false');
 INSERT INTO parametre (nom, valeur) VALUES ('max_reservations_per_day', '100');
-INSERT INTO parametre (nom, valeur) VALUES ('VM', '60'); -- Vitesse Moyenne en km/h
-INSERT INTO parametre (nom, valeur) VALUES ('temps_attente', '10'); -- Temps d'attente en minutes pour le groupement des vagues
+INSERT INTO parametre (nom, valeur) VALUES ('VM', '50'); -- Vitesse Moyenne en km/h
+INSERT INTO parametre (nom, valeur) VALUES ('temps_attente', '30'); -- Temps d'attente en minutes pour le groupement des vagues
 
-INSERT INTO assignation (id_voiture, date_heure_depart, date_heure_arrivee) VALUES (1, '2026-03-18 00:00:00', '2026-03-18 09:05:00');
+-- INSERT INTO assignation (id_voiture, date_heure_depart, date_heure_arrivee) VALUES (1, '2026-03-18 00:00:00', '2026-03-18 09:05:00');

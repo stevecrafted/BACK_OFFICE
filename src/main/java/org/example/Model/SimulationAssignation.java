@@ -2,7 +2,9 @@ package org.example.Model;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Représente une simulation d'assignation (pas encore enregistrée en base)
@@ -17,6 +19,9 @@ public class SimulationAssignation {
     private Timestamp debutVague;
     private Timestamp finFenetreVague;
     private List<EtapeItineraire> itineraire = new ArrayList<>();
+    
+    // Map pour stocker le nombre de passagers réellement assignés par réservation (id -> nbPassagers assignés)
+    private Map<Integer, Integer> passagersParReservation = new HashMap<>();
 
     public SimulationAssignation(Voiture voiture, Timestamp heureVague) {
         this.voiture = voiture;
@@ -29,9 +34,32 @@ public class SimulationAssignation {
         return placesRestantes >= nbPassagers;
     }
 
+    /**
+     * Ajoute une réservation à l'assignation.
+     * Le nombre de passagers de la réservation correspond aux passagers à prendre dans ce véhicule.
+     */
     public void ajouterReservation(Reservation reservation) {
+        int passagersAPrendre = Math.min(reservation.getNbPassager(), placesRestantes);
+        
+        // Stocker le nombre de passagers pris pour cette réservation
+        passagersParReservation.put(reservation.getId(), passagersAPrendre);
+        
         reservations.add(reservation);
-        placesRestantes -= reservation.getNbPassager();
+        placesRestantes -= passagersAPrendre;
+    }
+    
+    /**
+     * Retourne le nombre de passagers assignés pour une réservation donnée
+     */
+    public int getPassagersAssignes(int idReservation) {
+        return passagersParReservation.getOrDefault(idReservation, 0);
+    }
+    
+    /**
+     * Retourne la map complète des passagers par réservation
+     */
+    public Map<Integer, Integer> getPassagersParReservation() {
+        return passagersParReservation;
     }
 
     public int getEcartPlaces(int nbPassagers) {
@@ -43,8 +71,15 @@ public class SimulationAssignation {
     public void setVoiture(Voiture voiture) {
         this.voiture = voiture;
         // Recalculer les places restantes avec la nouvelle capacité
-        int passagersActuels = reservations.stream().mapToInt(Reservation::getNbPassager).sum();
+        int passagersActuels = passagersParReservation.values().stream().mapToInt(Integer::intValue).sum();
         this.placesRestantes = voiture.getCapacite() - passagersActuels;
+    }
+    
+    /**
+     * Retourne le nombre total de passagers assignés dans cette assignation
+     */
+    public int getTotalPassagers() {
+        return passagersParReservation.values().stream().mapToInt(Integer::intValue).sum();
     }
     public List<Reservation> getReservations() { return reservations; }
     public int getPlacesRestantes() { return placesRestantes; }

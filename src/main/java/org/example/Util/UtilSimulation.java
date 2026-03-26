@@ -2,9 +2,12 @@ package org.example.Util;
 
 import org.example.DAO.DistanceDAO;
 import org.example.DAO.LieuDAO;
+import org.example.DAO.ParametreDAO;
 import org.example.Model.*;
 
 import java.sql.Timestamp;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public class UtilSimulation {
@@ -35,7 +38,7 @@ public class UtilSimulation {
      */
     public static Voiture trouverMeilleurVoiture(Reservation reservation, List<Voiture> voituresDisponibles,
             Map<Integer, Integer> compteurTrajetsJour, Map<Integer, Timestamp> voituresEnTrajet,
-            Timestamp finFenetreVague) {
+            Timestamp finFenetreVague, java.sql.Date dateSimulation) {
 
         if (voituresDisponibles == null || voituresDisponibles.isEmpty()) {
             return null;
@@ -50,8 +53,10 @@ public class UtilSimulation {
         // Séparer les voitures en 3 listes
         for (Voiture voiture : voituresDisponibles) {
 
-            // Calculer la disponibilité réelle (max entre disponibilité originale et heure de retour)
-            Timestamp disponibiliteReelle = Timestamp.valueOf(voiture.getDisponibilite().toString());
+            // Calculer la disponibilité réelle: combiner date simulation + heure de disponibilité
+            Timestamp disponibiliteReelle = combinerDateEtHeure(dateSimulation, voiture.getDisponibilite());
+            
+            // Si la voiture est en trajet, prendre le max entre dispo et heure de retour
             if (voituresEnTrajet != null && voituresEnTrajet.containsKey(voiture.getIdVoiture())) {
                 Timestamp heureRetour = voituresEnTrajet.get(voiture.getIdVoiture());
                 if (heureRetour != null && heureRetour.after(disponibiliteReelle)) {
@@ -73,7 +78,7 @@ public class UtilSimulation {
             }
         }
 
-        // Priorité ny egal
+        // Priorité 1: capacité égale
         if (listeVoitureEgalCapacite.size() > 0 && listeVoitureEgalCapacite.size() == 1) {
             return listeVoitureEgalCapacite.get(0);
         } else if (listeVoitureEgalCapacite.size() > 1) {
@@ -82,43 +87,65 @@ public class UtilSimulation {
             return voiture;
         }
 
-        // Traiter sup et inf ensemble (pas de priorité entre eux)
-        // Fusionner les deux listes
-        List<Voiture> listeCandidats = new ArrayList<>();
-        listeCandidats.addAll(listeVoitureSupCapacite);
-        listeCandidats.addAll(listeVoitureInfCapacite);
-
-        if (listeCandidats.isEmpty()) {
-            return null;
-        }
-
-        if (listeCandidats.size() == 1) {
-            return listeCandidats.get(0);
-        }
-
-        // Calculer l'écart pour chaque voiture et trouver l'écart minimal
-        int ecartMin = Integer.MAX_VALUE;
-        for (Voiture v : listeCandidats) {
-            int ecart = Math.abs(v.getCapacite() - nbPassagers);
-            if (ecart < ecartMin) {
-                ecartMin = ecart;
+        // Priorité 2: capacité supérieure (peut prendre TOUS les passagers)
+        // Choisir celle avec l'écart minimal (la plus proche de la capacité exacte)
+        if (!listeVoitureSupCapacite.isEmpty()) {
+            if (listeVoitureSupCapacite.size() == 1) {
+                return listeVoitureSupCapacite.get(0);
             }
-        }
-
-        // Filtrer les voitures avec l'écart minimal
-        List<Voiture> voituresEcartMin = new ArrayList<>();
-        for (Voiture v : listeCandidats) {
-            if (Math.abs(v.getCapacite() - nbPassagers) == ecartMin) {
-                voituresEcartMin.add(v);
+            
+            // Trouver l'écart minimal parmi les voitures supérieures
+            int ecartMinSup = Integer.MAX_VALUE;
+            for (Voiture v : listeVoitureSupCapacite) {
+                int ecart = v.getCapacite() - nbPassagers;
+                if (ecart < ecartMinSup) {
+                    ecartMinSup = ecart;
+                }
             }
+            
+            // Filtrer les voitures avec l'écart minimal
+            List<Voiture> voituresEcartMin = new ArrayList<>();
+            for (Voiture v : listeVoitureSupCapacite) {
+                if (v.getCapacite() - nbPassagers == ecartMinSup) {
+                    voituresEcartMin.add(v);
+                }
+            }
+            
+            if (voituresEcartMin.size() == 1) {
+                return voituresEcartMin.get(0);
+            }
+            
+            // Départager par carburant/trajets
+            return trouverVoitureCarburantNbrTrajet(voituresEcartMin, compteurTrajetsJour, nbPassagers);
         }
 
-        if (voituresEcartMin.size() == 1) {
-            return voituresEcartMin.get(0);
+        // Priorité 3: capacité inférieure (ne peut pas prendre tous les passagers)
+        // On prend quand même ce qu'on peut, choisir la plus grande capacité
+        if (!listeVoitureInfCapacite.isEmpty()) {
+            if (listeVoitureInfCapacite.size() == 1) {
+                return listeVoitureInfCapacite.get(0);
+            }
+            
+            // Trier par capacité décroissante (prendre le plus de passagers possible)
+            listeVoitureInfCapacite.sort((v1, v2) -> Integer.compare(v2.getCapacite(), v1.getCapacite()));
+            
+            int maxCapacite = listeVoitureInfCapacite.get(0).getCapacite();
+            List<Voiture> voituresMaxCapacite = new ArrayList<>();
+            for (Voiture v : listeVoitureInfCapacite) {
+                if (v.getCapacite() == maxCapacite) {
+                    voituresMaxCapacite.add(v);
+                }
+            }
+            
+            if (voituresMaxCapacite.size() == 1) {
+                return voituresMaxCapacite.get(0);
+            }
+            
+            // Départager par carburant/trajets
+            return trouverVoitureCarburantNbrTrajet(voituresMaxCapacite, compteurTrajetsJour, nbPassagers);
         }
 
-        // Si égalité d'écart, regarder le carburant et nombre de trajets
-        return trouverVoitureCarburantNbrTrajet(voituresEcartMin, compteurTrajetsJour, nbPassagers);
+        return null;
     }
 
     /**
@@ -249,6 +276,27 @@ public class UtilSimulation {
         return meilleureReservation;
     }
 
+    public static Reservation trouverPremiereReservationDuJour(List<Reservation> reservations) {
+        ParametreDAO parametreDAO = new ParametreDAO();
+        int tempsAttenteMinutes = parametreDAO.getTempsAttente();
+        Map<String, List<Reservation>> vagues = regrouperParVague(reservations, tempsAttenteMinutes);
+
+        if (vagues == null || vagues.isEmpty()) {
+            return null;
+        }
+
+        // Première vague (ordre d'insertion = ordre chronologique)
+        Map.Entry<String, List<Reservation>> premiereEntree = vagues.entrySet().iterator().next();
+        List<Reservation> premiereVague = premiereEntree.getValue();
+
+        if (premiereVague == null || premiereVague.isEmpty()) {
+            return null;
+        }
+
+        // Les réservations sont déjà triées par dateHeure dans la vague
+        return premiereVague.get(0);
+    }
+
     /**
      * Regroupe les réservations par vague selon le temps d'attente.
      *
@@ -316,9 +364,32 @@ public class UtilSimulation {
         cal.set(Calendar.MILLISECOND, 0);
         return cal.getTimeInMillis();
     }
+    
+    /**
+     * Combine une date (Date) et une heure (Time) en un Timestamp
+     */
+    public static Timestamp combinerDateEtHeure(java.sql.Date date, java.sql.Time heure) {
+        Calendar calDate = Calendar.getInstance();
+        calDate.setTime(date);
+        
+        Calendar calHeure = Calendar.getInstance();
+        calHeure.setTime(heure);
+        
+        Calendar resultat = Calendar.getInstance();
+        resultat.set(Calendar.YEAR, calDate.get(Calendar.YEAR));
+        resultat.set(Calendar.MONTH, calDate.get(Calendar.MONTH));
+        resultat.set(Calendar.DAY_OF_MONTH, calDate.get(Calendar.DAY_OF_MONTH));
+        resultat.set(Calendar.HOUR_OF_DAY, calHeure.get(Calendar.HOUR_OF_DAY));
+        resultat.set(Calendar.MINUTE, calHeure.get(Calendar.MINUTE));
+        resultat.set(Calendar.SECOND, 0);
+        resultat.set(Calendar.MILLISECOND, 0);
+        
+        return new Timestamp(resultat.getTimeInMillis());
+    }
 
     /**
-     * Compare deux voitures pour déterminer laquelle est meilleure pour un nombre de passagers donné.
+     * Compare deux voitures pour déterminer laquelle est meilleure pour un nombre
+     * de passagers donné.
      * Critères de comparaison (dans l'ordre):
      * 1. Écart minimal avec le nombre de passagers
      * 2. Nombre de trajets minimal
@@ -341,8 +412,12 @@ public class UtilSimulation {
         }
 
         // Écart égal → comparer nombre de trajets
-        int trajetsNouvelle = compteurTrajetsJour != null ? compteurTrajetsJour.getOrDefault(nouvelleVoiture.getIdVoiture(), 0) : 0;
-        int trajetsActuelle = compteurTrajetsJour != null ? compteurTrajetsJour.getOrDefault(voitureActuelle.getIdVoiture(), 0) : 0;
+        int trajetsNouvelle = compteurTrajetsJour != null
+                ? compteurTrajetsJour.getOrDefault(nouvelleVoiture.getIdVoiture(), 0)
+                : 0;
+        int trajetsActuelle = compteurTrajetsJour != null
+                ? compteurTrajetsJour.getOrDefault(voitureActuelle.getIdVoiture(), 0)
+                : 0;
 
         if (trajetsNouvelle < trajetsActuelle) {
             return true;
@@ -357,32 +432,11 @@ public class UtilSimulation {
         }
 
         return false;
-    }
-
-    public static void AssignationOptimal(SimulationAssignation simulationAssignation, List<Reservation> reservationsVague) {
-        // Remplissage optimal : chercher des réservations qui correspondent au reste de
-        // places
-        while (simulationAssignation.getPlacesRestantes() > 0 && !reservationsVague.isEmpty()) {
-            Reservation reservationRemplissage = UtilSimulation.trouverReservationPourRemplissage(
-                    reservationsVague,
-                    simulationAssignation.getPlacesRestantes());
-
-            if (reservationRemplissage == null) {
-                break;
-            }
-
-            // Vérifier que la réservation peut rentrer
-            if (reservationRemplissage.getNbPassager() > simulationAssignation.getPlacesRestantes()) {
-                break;
-            }
-
-            simulationAssignation.ajouterReservation(reservationRemplissage);
-            reservationsVague.remove(reservationRemplissage);
-        }
-    }
-
+    } 
+    
     /**
-     * Calcule l'itinéraire, l'heure de départ et l'heure d'arrivée pour une assignation.
+     * Calcule l'itinéraire, l'heure de départ et l'heure d'arrivée pour une
+     * assignation.
      *
      * - Heure de départ = heureDepart (passée en paramètre)
      * - Itinéraire = Aéroport → Hôtel1 → Hôtel2 → ...
@@ -397,7 +451,8 @@ public class UtilSimulation {
      * @param vitesseMoyenneKmH Vitesse moyenne en km/h
      */
     public static void calculerItineraire(SimulationAssignation assignation, Lieu aeroport,
-            Timestamp heureDepart, Timestamp finFenetreVague, DistanceDAO distanceDAO, LieuDAO lieuDAO, double vitesseMoyenneKmH) {
+            Timestamp heureDepart, Timestamp finFenetreVague, DistanceDAO distanceDAO, LieuDAO lieuDAO,
+            double vitesseMoyenneKmH) {
 
         if (assignation == null || assignation.getReservations().isEmpty()) {
             return;
@@ -433,7 +488,8 @@ public class UtilSimulation {
             double dureeMinutes = (distanceKm / vitesseMoyenneKmH) * 60.0;
 
             // Créer l'étape
-            EtapeItineraire etape = new EtapeItineraire(ordre, lieuDepartNom, lieuArrivee.getLibelle(), distanceKm, dureeMinutes);
+            EtapeItineraire etape = new EtapeItineraire(ordre, lieuDepartNom, lieuArrivee.getLibelle(), distanceKm,
+                    dureeMinutes);
             itineraire.add(etape);
 
             // Le prochain départ est l'arrivée actuelle
@@ -442,12 +498,32 @@ public class UtilSimulation {
             ordre++;
         }
 
+        // Ajouter le trajet retour: dernier Hôtel → Aéroport
+        if (!hotelsIds.isEmpty()) {
+            int dernierHotelId = hotelsIds.get(hotelsIds.size() - 1);
+            Lieu dernierHotel = lieuDAO.findById(dernierHotelId);
+            
+            Double distanceRetour = distanceDAO.getDistance(dernierHotelId, aeroport.getId());
+            if (distanceRetour == null) {
+                distanceRetour = 0.0;
+            }
+            
+            double dureeRetourMinutes = (distanceRetour / vitesseMoyenneKmH) * 60.0;
+            
+            EtapeItineraire etapeRetour = new EtapeItineraire(ordre, 
+                    dernierHotel != null ? dernierHotel.getLibelle() : "Hôtel", 
+                    aeroport.getLibelle(), 
+                    distanceRetour, 
+                    dureeRetourMinutes);
+            itineraire.add(etapeRetour);
+        }
+
         // Mettre à jour l'assignation
         assignation.setItineraire(itineraire);
         assignation.setFinFenetreVague(finFenetreVague);
         assignation.setDateHeureDepart(heureDepart);
 
-        // Calculer l'heure d'arrivée
+        // Calculer l'heure d'arrivée (retour à l'aéroport)
         double dureeTotaleMinutes = assignation.getDureeTotaleMinutes();
         long dureeTotaleMs = (long) (dureeTotaleMinutes * 60 * 1000);
         Timestamp heureArrivee = new Timestamp(heureDepart.getTime() + dureeTotaleMs);

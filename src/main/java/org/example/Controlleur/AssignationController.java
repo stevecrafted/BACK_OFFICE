@@ -206,10 +206,8 @@ public class AssignationController {
             ResultatSimulation resultat = simulationService.simulerAssignation(dateSimulation);
             
             mv.addAttribute("resultat", resultat);
-            mv.addAttribute("dateSimulation", dateStr);
-            
-        } catch (IllegalArgumentException e) {
-            mv.addAttribute("error", "Format de date invalide. Utilisez YYYY-MM-DD");
+            mv.addAttribute("dateSimulation", dateStr);   
+        
         } catch (Exception e) {
             mv.addAttribute("error", "Erreur lors de la simulation : " + e.getMessage());
             e.printStackTrace();
