@@ -11,7 +11,7 @@ public class VoitureDAO {
 
     // CREATE
     public boolean create(Voiture voiture) {
-        String sql = "INSERT INTO Voiture (Capacite, ref_, carburant) VALUES (?, ?, ?)";
+        String sql = "INSERT INTO Voiture (Capacite, ref_, carburant, disponibilite) VALUES (?, ?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -19,6 +19,7 @@ public class VoitureDAO {
             stmt.setInt(1, voiture.getCapacite());
             stmt.setString(2, "TEMP");
             stmt.setString(3, voiture.getCarburant());
+            stmt.setTime(4, voiture.getDisponibilite() != null ? voiture.getDisponibilite() : Time.valueOf("00:00:00"));
 
             int rowsAffected = stmt.executeUpdate();
 
@@ -152,7 +153,7 @@ public class VoitureDAO {
 
     // UPDATE
     public boolean update(Voiture voiture) {
-        String sql = "UPDATE Voiture SET Capacite = ?, ref_ = ?, carburant = ? WHERE idVoiture = ?";
+        String sql = "UPDATE Voiture SET Capacite = ?, ref_ = ?, carburant = ?, disponibilite = ? WHERE idVoiture = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -160,7 +161,8 @@ public class VoitureDAO {
             stmt.setInt(1, voiture.getCapacite());
             stmt.setString(2, voiture.getRef());
             stmt.setString(3, voiture.getCarburant());
-            stmt.setInt(4, voiture.getIdVoiture());
+            stmt.setTime(4, voiture.getDisponibilite() != null ? voiture.getDisponibilite() : Time.valueOf("00:00:00"));
+            stmt.setInt(5, voiture.getIdVoiture());
 
             int rowsAffected = stmt.executeUpdate();
 
@@ -207,6 +209,7 @@ public class VoitureDAO {
         voiture.setCapacite(rs.getInt("Capacite"));
         voiture.setRef(rs.getString("ref_"));
         voiture.setCarburant(rs.getString("carburant").trim());
+        voiture.setDisponibilite(rs.getTime("disponibilite"));
         return voiture;
     }
 }

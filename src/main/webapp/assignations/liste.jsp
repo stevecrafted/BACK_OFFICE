@@ -141,7 +141,8 @@
                         <th>Client</th>
                         <th>Passagers</th>
                         <th>Lieu</th>
-                        <th>Date Assignation</th>
+                        <th>Départ</th>
+                        <th>Arrivée</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -151,6 +152,13 @@
                             Assignation assignation = (Assignation) detail.get("assignation");
                             Voiture voiture = (Voiture) detail.get("voiture");
                             Reservation reservation = (Reservation) detail.get("reservation");
+                            List<Reservation> reservations = (List<Reservation>) detail.get("reservations");
+                            int totalPassagers = 0;
+                            if (reservations != null) {
+                                for (Reservation res : reservations) {
+                                    totalPassagers += res.getNbPassager();
+                                }
+                            }
                     %>
                         <tr>
                             <td><span class="badge badge-info">#<%= assignation.getId() %></span></td>
@@ -159,11 +167,15 @@
                                 <small>ID: <%= voiture.getIdVoiture() %></small>
                             </td>
                             <td><span class="badge badge-success"><%= voiture.getCapacite() %> places</span></td>
-                            <td><span class="badge badge-info">#<%= reservation.getId() %></span></td>
-                            <td><%= reservation.getIdClient() %></td>
-                            <td><strong><%= reservation.getNbPassager() %></strong> passagers</td>
-                            <td>Lieu #<%= reservation.getIdLieu() %></td>
-                            <td><%= assignation.getDateAssignation() %></td>
+                            <td>
+                                <%= reservations != null ? reservations.size() : 0 %> réservation(s)
+                                <% if (reservation != null) { %><br><small>#<%= reservation.getId() %> ...</small><% } %>
+                            </td>
+                            <td><%= reservation != null ? reservation.getIdClient() : "-" %></td>
+                            <td><strong><%= totalPassagers %></strong> passagers</td>
+                            <td><%= reservation != null ? ("Lieu #" + reservation.getIdLieu()) : "-" %></td>
+                            <td><%= assignation.getDateHeureDepart() %></td>
+                            <td><%= assignation.getDateHeureArrivee() %></td>
                             <td>
                                 <form action="/assignations/delete" method="post" style="display: inline;" 
                                       onsubmit="return confirm('Supprimer cette assignation ?');">

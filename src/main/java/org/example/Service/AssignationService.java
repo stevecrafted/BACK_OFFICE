@@ -3,6 +3,7 @@ package org.example.Service;
 import org.example.DAO.*;
 import org.example.Model.*;
 
+import java.sql.Timestamp;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -35,7 +36,10 @@ public class AssignationService {
             Voiture meilleureVoiture = trouverMeilleureVoiture(reservation);
 
             if (meilleureVoiture != null) {
-                Assignation assignation = new Assignation(meilleureVoiture.getIdVoiture(), reservation.getId());
+                Timestamp depart = reservation.getDateHeure();
+                Timestamp arrivee = reservation.getDateHeure();
+                Assignation assignation = new Assignation(meilleureVoiture.getIdVoiture(), depart, arrivee);
+                assignation.ajouterReservationAssignation(reservation.getId(), 1);
                 
                 if (assignationDAO.create(assignation)) {
                     nouvellesAssignations.add(assignation);
@@ -99,9 +103,11 @@ public class AssignationService {
         List<Assignation> assignations = assignationDAO.findByVoiture(voiture.getIdVoiture());
         int placesOccupees = 0;
         for (Assignation assignation : assignations) {
-            Reservation res = reservationDAO.findById(assignation.getIdReservation());
-            if (res != null) {
-                placesOccupees += res.getNbPassager();
+            for (ReservationAssignation ra : assignation.getReservationAssignations()) {
+                Reservation res = reservationDAO.findById(ra.getIdReservation());
+                if (res != null) {
+                    placesOccupees += res.getNbPassager();
+                }
             }
         }
         return voiture.getCapacite() - placesOccupees;

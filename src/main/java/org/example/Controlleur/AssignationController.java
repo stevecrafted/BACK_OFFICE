@@ -5,6 +5,7 @@ import org.example.DAO.AssignationDAO;
 import org.example.DAO.ReservationDAO;
 import org.example.DAO.VoitureDAO;
 import org.example.Model.Assignation;
+import org.example.Model.ReservationAssignation;
 import org.example.Model.Reservation;
 import org.example.Model.Voiture;
 import org.example.Model.ResultatSimulation;
@@ -14,6 +15,7 @@ import org.example.Service.SimulationAssignationService;
 import org.Entity.ModelView;
 
 import java.sql.Date;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -47,9 +49,16 @@ public class AssignationController {
             
             Voiture voiture = voitureDAO.findById(assignation.getIdVoiture());
             detail.put("voiture", voiture);
-            
-            Reservation reservation = reservationDAO.findById(assignation.getIdReservation());
-            detail.put("reservation", reservation);
+
+            List<Reservation> reservations = new ArrayList<>();
+            for (ReservationAssignation ra : assignation.getReservationAssignations()) {
+                Reservation reservation = reservationDAO.findById(ra.getIdReservation());
+                if (reservation != null) {
+                    reservations.add(reservation);
+                }
+            }
+            detail.put("reservations", reservations);
+            detail.put("reservation", reservations.isEmpty() ? null : reservations.get(0));
             
             assignationsDetails.add(detail);
         }
@@ -70,7 +79,10 @@ public class AssignationController {
         
         for (Assignation assignation : assignations) {
             Voiture voiture = voitureDAO.findById(assignation.getIdVoiture());
-            Reservation reservation = reservationDAO.findById(assignation.getIdReservation());
+            Reservation reservation = null;
+            if (!assignation.getReservationAssignations().isEmpty()) {
+                reservation = reservationDAO.findById(assignation.getReservationAssignations().get(0).getIdReservation());
+            }
             
             details.add(new AssignationDetail(assignation, voiture, reservation));
         }
@@ -142,16 +154,13 @@ public class AssignationController {
         try {
             int nbSuppressions = 0;
 
-            // deleteSelections = "idReservation1,idReservation2,..."
+            // deleteSelections = "idAssignation1,idAssignation2,..."
             if (deleteSelections != null && !deleteSelections.isEmpty()) {
                 String[] ids = deleteSelections.split(",");
                 for (String idStr : ids) {
-                    int idReservation = Integer.parseInt(idStr.trim());
-                    Assignation assignation = assignationDAO.findByReservation(idReservation);
-                    if (assignation != null) {
-                        if (assignationDAO.delete(assignation.getId())) {
-                            nbSuppressions++;
-                        }
+                    int idAssignation = Integer.parseInt(idStr.trim());
+                    if (assignationDAO.delete(idAssignation)) {
+                        nbSuppressions++;
                     }
                 }
             }
@@ -237,21 +246,46 @@ public class AssignationController {
         try {
             int nbAssignations = 0;
             
-            // selections = "idVoiture:idReservation,idVoiture:idReservation,..."
+            // selections = "idVoiture|departMs|arriveeMs|idRes:ordre;idRes:ordre##..."
             if (selections != null && !selections.isEmpty()) {
-                String[] paires = selections.split(",");
-                for (String paire : paires) {
-                    String[] parts = paire.split(":");
-                    if (parts.length == 2) {
+                String[] blocs = selections.split("##");
+                for (String bloc : blocs) {
+                    String[] parts = bloc.split("\\|", 4);
+                    if (parts.length == 4) {
                         int idVoiture = Integer.parseInt(parts[0].trim());
-                        int idReservation = Integer.parseInt(parts[1].trim());
-                        
-                        // Vérifier que cette réservation n'est pas déjà assignée
-                        if (assignationDAO.findByReservation(idReservation) == null) {
+                        Timestamp depart = new Timestamp(Long.parseLong(parts[1].trim()));
+                        Timestamp arrivee = new Timestamp(Long.parseLong(parts[2].trim()));
+
+                        String[] reservationTokens = parts[3].split(";");
+                        boolean dejaAssignee = false;
+                        List<ReservationAssignation> liens = new ArrayList<>();
+
+                        for (String token : reservationTokens) {
+                            String[] rv = token.split(":");
+                            if (rv.length != 2) {
+                                continue;
+                            }
+                            int idReservation = Integer.parseInt(rv[0].trim());
+                            int ordre = Integer.parseInt(rv[1].trim());
+
+                            if (assignationDAO.findByReservation(idReservation) != null) {
+                                dejaAssignee = true;
+                                break;
+                            }
+
+                            ReservationAssignation ra = new ReservationAssignation();
+                            ra.setIdReservation(idReservation);
+                            ra.setOrdreItineraire(ordre);
+                            liens.add(ra);
+                        }
+
+                        if (!dejaAssignee && !liens.isEmpty()) {
                             Assignation assignation = new Assignation();
                             assignation.setIdVoiture(idVoiture);
-                            assignation.setIdReservation(idReservation);
-                            
+                            assignation.setDateHeureDepart(depart);
+                            assignation.setDateHeureArrivee(arrivee);
+                            assignation.setReservationAssignations(liens);
+
                             if (assignationDAO.create(assignation)) {
                                 nbAssignations++;
                             }
