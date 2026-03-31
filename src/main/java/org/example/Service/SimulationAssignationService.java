@@ -16,6 +16,7 @@ public class SimulationAssignationService {
     private LieuDAO lieuDAO = new LieuDAO();
     private ParametreDAO parametreDAO = new ParametreDAO();
     private AssignationDAO assignationDAO = new AssignationDAO();
+    private VoitureService voitureService = new VoitureService(); // SPRINT 8
 
     // Stocke les intervalles [debutFenetre, finFenetre] de chaque vague (clé =
     // cleVague)
@@ -303,6 +304,78 @@ public class SimulationAssignationService {
             System.out.println(" Fin fenêtre: " + finFenetreVague);
             System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             
+            // ===== SPRINT 8: TRAITEMENT DES RETOURS DE VÉHICULES =====
+            // Collecter les réservations non assignées de cette vague
+            List<Reservation> reservationsNonAssignees = new ArrayList<>();
+            for (Reservation r : reservationsVague) {
+                int restants = passagersRestantsParReservation.getOrDefault(r.getId(), 0);
+                if (restants > 0) {
+                    Reservation copie = copierReservation(r, restants);
+                    reservationsNonAssignees.add(copie);
+                }
+            }
+            
+            // Ajouter aussi les réservations en attente des vagues précédentes
+            reservationsNonAssignees.addAll(reservationsATraiter);
+            
+            // S'il y a des réservations non assignées, tenter de les assigner aux véhicules qui reviennent
+            if (!reservationsNonAssignees.isEmpty()) {
+                // Déterminer la date/heure limite pour le traitement des retours
+                Timestamp dateHeureProchainVague = null;
+                if (!reservationsATraiter.isEmpty()) {
+                    dateHeureProchainVague = reservationsATraiter.get(0).getDateHeure();
+                } else {
+                    // Si pas de prochaine vague, utiliser la fin de la journée
+                    Calendar cal = Calendar.getInstance();
+                    cal.setTime(dateSimulation);
+                    cal.set(Calendar.HOUR_OF_DAY, 23);
+                    cal.set(Calendar.MINUTE, 59);
+                    cal.set(Calendar.SECOND, 59);
+                    dateHeureProchainVague = new Timestamp(cal.getTimeInMillis());
+                }
+                
+                System.out.println(" SPRINT 8: Traitement des retours de véhicules...");
+                System.out.println(" Réservations non assignées: " + reservationsNonAssignees.size());
+                
+                // Appeler le traitement des retours de véhicules
+                SimulationAssignation assignationRetour = traiterRetourVehicule(
+                    reservationsNonAssignees, 
+                    reservationsDejaAssignees,
+                    finFenetreVague, 
+                    dateHeureProchainVague,
+                    dateSimulation, 
+                    toutesVoitures, 
+                    voituresEnTrajet,
+                    compteurTrajetsJour, 
+                    vitesseMoyenne, 
+                    aeroport, 
+                    tempsAttenteMinutes
+                );
+                
+                // Si une assignation a été créée, l'ajouter au résultat
+                if (assignationRetour != null) {
+                    resultat.ajouterAssignation(assignationRetour);
+                    System.out.println(" ✓ Assignation créée avec véhicule de retour: " + 
+                        assignationRetour.getVoiture().getRef());
+                    
+                    // Retirer les réservations assignées de la liste des non assignées
+                    for (Reservation r : assignationRetour.getReservations()) {
+                        reservationsNonAssignees.removeIf(res -> res.getId() == r.getId());
+                        
+                        // Mettre à jour les passagers restants
+                        int passagersAssignes = assignationRetour.getPassagersAssignes(r.getId());
+                        int restants = passagersRestantsParReservation.getOrDefault(r.getId(), 0);
+                        passagersRestantsParReservation.put(r.getId(), Math.max(0, restants - passagersAssignes));
+                    }
+                    
+                    // Mettre à jour voituresEnTrajet avec l'heure de retour du véhicule utilisé
+                    setHeureRetour(assignationRetour, voituresEnTrajet, assignationRetour.getVoiture(), aeroport, vitesseMoyenne);
+                } else {
+                    System.out.println(" ✗ Aucun véhicule de retour disponible");
+                }
+            }
+            // ===== FIN SPRINT 8 =====
+            
             // Reporter les réservations avec des passagers restants à la vague suivante
             // Trouver la prochaine heure de disponibilité d'une voiture
             Timestamp prochaineDisponibilite = trouverProchaineDisponibilite(toutesVoitures, voituresEnTrajet, finFenetreVague, dateSimulation);
@@ -512,4 +585,112 @@ public class SimulationAssignationService {
         }
     }
 
+    // ========================================
+    // SPRINT 8: FEATURE 2 - Return Trip Assignment
+    // ========================================
+    
+    /**
+     * SPRINT 8 - Feature 2
+     * Traite les retours de véhicules et assigne les réservations en attente.
+     */
+    public SimulationAssignation traiterRetourVehicule(
+            List<Reservation> nonAssignees,
+            Set<Integer> assignees,
+            Timestamp dateHeureFin,
+            Timestamp dateHeureProchain,
+            Date dateSimulation,
+            List<Voiture> toutesVoitures,
+            Map<Integer, Timestamp> voituresEnTrajet,
+            Map<Integer, Integer> compteurTrajetsJour,
+            double vitesseMoyenne,
+            Lieu aeroport,
+            int tempsAttenteMinutes) {
+        
+        if (nonAssignees == null || nonAssignees.isEmpty()) {
+            return null;
+        }
+        
+        nonAssignees.sort((r1, r2) -> {
+            int comparePassagers = Integer.compare(r2.getNbPassager(), r1.getNbPassager());
+            if (comparePassagers != 0) return comparePassagers;
+            return r1.getDateHeure().compareTo(r2.getDateHeure());
+        });
+        
+        List<VoitureService.VoitureAvecCapacite> vehiculesDisponibles = 
+            voitureService.getPremiersVehicules(voituresEnTrajet, dateHeureFin, dateHeureProchain);
+        
+        if (vehiculesDisponibles == null || vehiculesDisponibles.isEmpty()) {
+            return null;
+        }
+        
+        for (Reservation reservation : nonAssignees) {
+            if (assignees.contains(reservation.getId())) continue;
+            
+            Voiture vehicule = voitureService.getRetourVehicule(
+                vehiculesDisponibles, reservation.getNbPassager(), compteurTrajetsJour);
+            
+            if (vehicule == null) continue;
+            
+            Timestamp heureRetourVehicule = voituresEnTrajet.get(vehicule.getIdVoiture());
+            if (heureRetourVehicule == null) continue;
+            
+            long finFenetreMs = heureRetourVehicule.getTime() + (tempsAttenteMinutes * 60L * 1000L);
+            Timestamp finFenetreVague = new Timestamp(finFenetreMs);
+            
+            SimulationAssignation simulationAssignation = new SimulationAssignation(vehicule, heureRetourVehicule);
+            simulationAssignation.setDebutVague(heureRetourVehicule);
+            simulationAssignation.setFinFenetreVague(finFenetreVague);
+            
+            int passagersAPrendre = Math.min(reservation.getNbPassager(), vehicule.getCapacite());
+            Reservation reservationAssignee = copierReservation(reservation, passagersAPrendre);
+            simulationAssignation.ajouterReservation(reservationAssignee);
+            assignees.add(reservation.getId());
+            
+            System.out.println(" [RETOUR] Véhicule " + vehicule.getRef() + " revient à " + 
+                heureRetourVehicule + " → Prend " + reservation.getIdClient() + 
+                " (" + passagersAPrendre + " passagers)");
+            
+            Map<Integer, Integer> passagersRestants = new HashMap<>();
+            for (Reservation r : nonAssignees) {
+                if (!assignees.contains(r.getId())) {
+                    passagersRestants.put(r.getId(), r.getNbPassager());
+                }
+            }
+            
+            remplissageOptimal(simulationAssignation, nonAssignees, passagersRestants);
+            
+            for (Reservation r : simulationAssignation.getReservations()) {
+                assignees.add(r.getId());
+            }
+            
+            Timestamp heureDepart;
+            if (simulationAssignation.getPlacesRestantes() == 0) {
+                heureDepart = heureRetourVehicule;
+                System.out.println(" [RETOUR] Véhicule PLEIN → Départ immédiat à " + heureDepart);
+            } else {
+                heureDepart = finFenetreVague;
+                System.out.println(" [RETOUR] Véhicule pas plein (" + 
+                    simulationAssignation.getPlacesRestantes() + " places vides) → Départ à " + heureDepart);
+            }
+            
+            UtilSimulation.calculerItineraire(simulationAssignation, aeroport, heureDepart, 
+                finFenetreVague, distanceDAO, lieuDAO, vitesseMoyenne);
+            
+            int trajetsActuels = compteurTrajetsJour.getOrDefault(vehicule.getIdVoiture(), 0);
+            compteurTrajetsJour.put(vehicule.getIdVoiture(), trajetsActuels + 1);
+            
+            setHeureRetour(simulationAssignation, voituresEnTrajet, vehicule, aeroport, vitesseMoyenne);
+            
+            for (VoitureService.VoitureAvecCapacite v : vehiculesDisponibles) {
+                if (v.voiture.getIdVoiture() == vehicule.getIdVoiture()) {
+                    v.capaciteRestante = simulationAssignation.getPlacesRestantes();
+                    break;
+                }
+            }
+            
+            return simulationAssignation;
+        }
+        
+        return null;
+    }
 }

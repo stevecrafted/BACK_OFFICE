@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       https://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <!-- Configuration de la base de données PostgreSQL -->
+    <!-- IMPORTANT: Copier ce fichier en 'beans.xml' et modifier les valeurs selon votre environnement -->
+    
+    <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+        <property name="driverClassName" value="org.postgresql.Driver"/>
+        
+        <!-- URL de la base de données -->
+        <!-- Format: jdbc:postgresql://[host]:[port]/[database_name] -->
+        <property name="url" value="jdbc:postgresql://localhost:5432/gde"/>
+        
+        <!-- Nom d'utilisateur PostgreSQL -->
+        <property name="username" value="postgres"/>
+        
+        <!-- Mot de passe PostgreSQL -->
+        <property name="password" value="postgres"/>
+    </bean>
+
+</beans>
