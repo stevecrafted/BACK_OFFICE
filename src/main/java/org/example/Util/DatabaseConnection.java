@@ -67,16 +67,10 @@ public class DatabaseConnection {
         }
     }
 
-    public static Connection getConnection() throws SQLException {
-        System.out.println("==========================================");
-        System.out.println(" TENTATIVE DE CONNEXION À LA BASE:");
-        System.out.println("URL: " + url);
-        System.out.println("User: " + username);
-        System.out.println("==========================================");
+    public static Connection getConnection() throws SQLException { 
 
         try {
-            Connection conn = DriverManager.getConnection(url, username, password);
-            System.out.println("✅ CONNEXION RÉUSSIE!");
+            Connection conn = DriverManager.getConnection(url, username, password); 
             return conn;
         } catch (SQLException e) {
             System.err.println("❌ ÉCHEC CONNEXION: " + e.getMessage());
