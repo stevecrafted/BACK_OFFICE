@@ -3,6 +3,7 @@
 
 # Ignore le dossier build
 build/
+beans.xml
 
 # Ignore le dossier lib
 
