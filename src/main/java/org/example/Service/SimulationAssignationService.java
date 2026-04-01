@@ -238,18 +238,46 @@ public class SimulationAssignationService {
             // Assignations temporaires pour cette vague
             Map<Integer, SimulationAssignation> assignationsVague = new LinkedHashMap<>();
 
-            // Traiter chaque réservation de la vague (fractionnable)
+            // Etat des réservations de la vague (agrégé par ID, avec passagers restants)
+            Map<Integer, Reservation> reservationsParId = new LinkedHashMap<>();
+            Map<Integer, Integer> passagersRestantsParReservation = new HashMap<>();
             for (Reservation reservation : reservationsVague) {
-                System.out.println("\n📌 Réservation #" + reservation.getId() +
-                        " - " + reservation.getNbPassager() + " passagers - Lieu #" +
-                        reservation.getIdLieu());
+                Reservation existe = reservationsParId.get(reservation.getId());
+                if (existe == null) {
+                    reservationsParId.put(reservation.getId(), reservation);
+                    passagersRestantsParReservation.put(reservation.getId(), reservation.getNbPassager());
+                } else {
+                    int cumule = passagersRestantsParReservation.getOrDefault(reservation.getId(), 0)
+                            + reservation.getNbPassager();
+                    passagersRestantsParReservation.put(reservation.getId(), cumule);
+                    if (reservation.getDateHeure() != null && existe.getDateHeure() != null
+                            && reservation.getDateHeure().before(existe.getDateHeure())) {
+                        reservationsParId.put(reservation.getId(), reservation);
+                    }
+                }
+            }
 
-                int passagersRestants = reservation.getNbPassager();
-                boolean aEtePartiellementAssignee = false;
+            // Boucle principale: toujours choisir la réservation prioritaire, puis la terminer
+            while (aDesPassagersRestants(passagersRestantsParReservation)) {
+                Reservation reservationPrincipale = choisirReservationPrincipale(
+                        reservationsParId,
+                        passagersRestantsParReservation,
+                        idsReservationsPrioritaires);
 
-                while (passagersRestants > 0) {
+                if (reservationPrincipale == null) {
+                    break;
+                }
+
+                int restantsPrincipale = passagersRestantsParReservation.getOrDefault(reservationPrincipale.getId(), 0);
+                System.out.println("\n📌 Réservation prioritaire #" + reservationPrincipale.getId() +
+                        " - " + restantsPrincipale + " passagers restants");
+
+                boolean progressionPrincipale = false;
+
+                while (passagersRestantsParReservation.getOrDefault(reservationPrincipale.getId(), 0) > 0) {
+                    int demande = passagersRestantsParReservation.getOrDefault(reservationPrincipale.getId(), 0);
                     CandidatAffectation candidat = choisirCandidatPourFraction(
-                            passagersRestants,
+                            demande,
                             voituresDisponibles,
                             assignationsVague,
                             compteurTrajetsJour);
@@ -258,8 +286,8 @@ public class SimulationAssignationService {
                         break;
                     }
 
-                    int nbAffectes = Math.min(passagersRestants, candidat.placesDisponibles);
-                    Reservation fraction = clonerReservationAvecPassagers(reservation, nbAffectes);
+                    int nbAffectes = Math.min(demande, candidat.placesDisponibles);
+                    Reservation fractionPrincipale = clonerReservationAvecPassagers(reservationPrincipale, nbAffectes);
 
                     SimulationAssignation cible = candidat.assignationExistante;
                     if (cible == null) {
@@ -269,22 +297,39 @@ public class SimulationAssignationService {
                                 " (" + candidat.voiture.getRef() + ")");
                     }
 
-                    cible.ajouterReservation(fraction);
-                    passagersRestants -= nbAffectes;
-                    aEtePartiellementAssignee = true;
+                    cible.ajouterReservation(fractionPrincipale);
+                    int nouveauRestantPrincipale = demande - nbAffectes;
+                    passagersRestantsParReservation.put(reservationPrincipale.getId(), nouveauRestantPrincipale);
+                    if (nouveauRestantPrincipale > 0) {
+                        idsReservationsPrioritaires.add(reservationPrincipale.getId());
+                    }
+                    progressionPrincipale = true;
 
                     System.out.println("   ✅ " + nbAffectes + " passager(s) affecté(s) à Voiture #" +
-                            cible.getVoiture().getIdVoiture() + " | Restants: " + passagersRestants);
+                            cible.getVoiture().getIdVoiture() + " | Restants réservation: " + nouveauRestantPrincipale);
+
+                    // Règle demandée: remplir la voiture avec la réservation la plus proche des places restantes
+                    remplirAssignationAvecReservationProche(
+                            cible,
+                            reservationsParId,
+                            passagersRestantsParReservation,
+                            idsReservationsPrioritaires);
                 }
 
-                if (passagersRestants > 0) {
-                    Reservation reliquat = clonerReservationAvecPassagers(reservation, passagersRestants);
+                if (!progressionPrincipale) {
+                    break;
+                }
+            }
+
+            // Tout reliquat devient non assigné pour retraitement prioritaire en vague suivante
+            for (Map.Entry<Integer, Reservation> entry : reservationsParId.entrySet()) {
+                int idReservation = entry.getKey();
+                int restants = passagersRestantsParReservation.getOrDefault(idReservation, 0);
+                if (restants > 0) {
+                    Reservation reliquat = clonerReservationAvecPassagers(entry.getValue(), restants);
                     reservationsNonAssignees.add(reliquat);
-                    System.out.println("   ❌ " + passagersRestants +
-                            " passager(s) non assigné(s) - sera/seront retraité(s) dans la vague suivante");
-                } else if (!aEtePartiellementAssignee) {
-                    System.out.println("   ❌ Aucune voiture disponible - sera retraitée dans la vague suivante");
-                    reservationsNonAssignees.add(reservation);
+                    idsReservationsPrioritaires.add(idReservation);
+                    System.out.println("   ❌ " + restants + " passager(s) non assigné(s) pour réservation #" + idReservation);
                 }
             }
 
@@ -617,6 +662,155 @@ public class SimulationAssignationService {
         clone.setNbPassager(nbPassagers);
         return clone;
         }
+
+    private boolean aDesPassagersRestants(Map<Integer, Integer> passagersRestantsParReservation) {
+        for (Integer restants : passagersRestantsParReservation.values()) {
+            if (restants != null && restants > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private Reservation choisirReservationPrincipale(
+            Map<Integer, Reservation> reservationsParId,
+            Map<Integer, Integer> passagersRestantsParReservation,
+            Set<Integer> idsReservationsPrioritaires) {
+
+        List<Reservation> candidates = new ArrayList<>();
+        for (Reservation reservation : reservationsParId.values()) {
+            if (passagersRestantsParReservation.getOrDefault(reservation.getId(), 0) > 0) {
+                candidates.add(reservation);
+            }
+        }
+
+        if (candidates.isEmpty()) {
+            return null;
+        }
+
+        boolean existePrioritaire = candidates.stream().anyMatch(r -> idsReservationsPrioritaires.contains(r.getId()));
+        if (existePrioritaire) {
+            candidates.removeIf(r -> !idsReservationsPrioritaires.contains(r.getId()));
+        }
+
+        candidates.sort((r1, r2) -> {
+            int p1 = passagersRestantsParReservation.getOrDefault(r1.getId(), 0);
+            int p2 = passagersRestantsParReservation.getOrDefault(r2.getId(), 0);
+            int cmpPassagers = Integer.compare(p2, p1);
+            if (cmpPassagers != 0) {
+                return cmpPassagers;
+            }
+            Timestamp t1 = r1.getDateHeure();
+            Timestamp t2 = r2.getDateHeure();
+            if (t1 == null && t2 == null) return 0;
+            if (t1 == null) return 1;
+            if (t2 == null) return -1;
+            return t1.compareTo(t2);
+        });
+
+        return candidates.get(0);
+    }
+
+    private void remplirAssignationAvecReservationProche(
+            SimulationAssignation assignation,
+            Map<Integer, Reservation> reservationsParId,
+            Map<Integer, Integer> passagersRestantsParReservation,
+            Set<Integer> idsReservationsPrioritaires) {
+
+        while (assignation.getPlacesRestantes() > 0) {
+            Reservation reservationRemplissage = choisirReservationPourRemplissage(
+                    assignation.getPlacesRestantes(),
+                    reservationsParId,
+                    passagersRestantsParReservation,
+                    idsReservationsPrioritaires);
+
+            if (reservationRemplissage == null) {
+                break;
+            }
+
+            int restants = passagersRestantsParReservation.getOrDefault(reservationRemplissage.getId(), 0);
+            if (restants <= 0) {
+                break;
+            }
+
+            int nbAffectes = Math.min(restants, assignation.getPlacesRestantes());
+            Reservation fraction = clonerReservationAvecPassagers(reservationRemplissage, nbAffectes);
+            assignation.ajouterReservation(fraction);
+
+            int nouveauRestant = restants - nbAffectes;
+            passagersRestantsParReservation.put(reservationRemplissage.getId(), nouveauRestant);
+
+            System.out.println("   ↳ Remplissage: réservation #" + reservationRemplissage.getId() +
+                    " +" + nbAffectes + " passager(s), restants réservation=" + nouveauRestant +
+                    ", places restantes voiture=" + assignation.getPlacesRestantes());
+        }
+    }
+
+    private Reservation choisirReservationPourRemplissage(
+            int placesRestantes,
+            Map<Integer, Reservation> reservationsParId,
+            Map<Integer, Integer> passagersRestantsParReservation,
+            Set<Integer> idsReservationsPrioritaires) {
+
+        List<Reservation> candidates = new ArrayList<>();
+        for (Reservation reservation : reservationsParId.values()) {
+            if (passagersRestantsParReservation.getOrDefault(reservation.getId(), 0) > 0) {
+                candidates.add(reservation);
+            }
+        }
+
+        if (candidates.isEmpty()) {
+            return null;
+        }
+
+        boolean existePrioritaire = candidates.stream().anyMatch(r -> idsReservationsPrioritaires.contains(r.getId()));
+        if (existePrioritaire) {
+            candidates.removeIf(r -> !idsReservationsPrioritaires.contains(r.getId()));
+        }
+
+        List<Reservation> superieursOuEgaux = new ArrayList<>();
+        List<Reservation> inferieurs = new ArrayList<>();
+
+        for (Reservation reservation : candidates) {
+            int restants = passagersRestantsParReservation.getOrDefault(reservation.getId(), 0);
+            if (restants >= placesRestantes) {
+                superieursOuEgaux.add(reservation);
+            } else {
+                inferieurs.add(reservation);
+            }
+        }
+
+        List<Reservation> pool = !superieursOuEgaux.isEmpty() ? superieursOuEgaux : inferieurs;
+        if (pool.isEmpty()) {
+            return null;
+        }
+
+        pool.sort((r1, r2) -> {
+            int p1 = passagersRestantsParReservation.getOrDefault(r1.getId(), 0);
+            int p2 = passagersRestantsParReservation.getOrDefault(r2.getId(), 0);
+
+            int ecart1 = Math.abs(p1 - placesRestantes);
+            int ecart2 = Math.abs(p2 - placesRestantes);
+            int cmpEcart = Integer.compare(ecart1, ecart2);
+            if (cmpEcart != 0) {
+                return cmpEcart;
+            }
+
+            int cmpPassagers = Integer.compare(p2, p1);
+            if (cmpPassagers != 0) {
+                return cmpPassagers;
+            }
+
+            Timestamp t1 = r1.getDateHeure();
+            Timestamp t2 = r2.getDateHeure();
+            if (t1 == null && t2 == null) return 0;
+            if (t1 == null) return 1;
+            if (t2 == null) return -1;
+            return t1.compareTo(t2);
+        });
+
+        return pool.get(0);
+    }
 
     /**
      * Compare deux voitures pour déterminer si la nouvelle est meilleure que l'actuelle
