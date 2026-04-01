@@ -101,7 +101,7 @@ CREATE TABLE token_validite(
 
 -- Voitures (carburant: E=Essence,  D=Diesel)
 INSERT INTO Voiture (Capacite, ref_, carburant, disponibilite) VALUES (5, 'vehicule1', 'D', '09:00:00'); 
-INSERT INTO Voiture (Capacite, ref_, carburant, disponibilite) VALUES (5, 'vehicule2', 'D', '09:28:00'); 
+INSERT INTO Voiture (Capacite, ref_, carburant, disponibilite) VALUES (5, 'vehicule2', 'D', '09:00:00');   
 
 INSERT INTO lieu (code, libelle, type) VALUES ('AER', 'Aéroport Ivato', 'aeroport');
 INSERT INTO lieu (code, libelle, type) VALUES ('HOT', 'hotel1', 'hotel');  
@@ -114,16 +114,22 @@ INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 4, 2);
 INSERT INTO distance (id_from, id_to, kilometer) VALUES (2, 3, 60); 
 INSERT INTO distance (id_from, id_to, kilometer) VALUES (3, 4, 50);
 
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (3, 'client1', 8, '2026-03-19 09:00:00');   
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (3, 'client2', 5, '2026-03-19 10:23:00');   
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (3, 'client3', 5, '2026-03-19 09:24:00');  
+
+
+-- INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (3, 'client1', 2, '2026-03-19 08:00:00'); 
+-- INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (3, 'client2', 4, '2026-03-19 08:15:00');  
+
+INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (3, 'client3', 5, '2026-03-19 08:00:00');   
+INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (3, 'client4', 4, '2026-03-19 08:00:00');
+INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (3, 'client5', 7, '2026-03-19 09:15:00');
+
+INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (3, 'clientblablaa', 8, '2026-03-19 10:24:00');
 
 INSERT INTO parametre (nom, valeur) VALUES ('app_version', '2.0.0');
 INSERT INTO parametre (nom, valeur) VALUES ('maintenance_mode', 'false');
 INSERT INTO parametre (nom, valeur) VALUES ('max_reservations_per_day', '100');
 INSERT INTO parametre (nom, valeur) VALUES ('VM', '50'); -- Vitesse Moyenne en km/h
 INSERT INTO parametre (nom, valeur) VALUES ('temps_attente', '30'); -- Temps d'attente en minutes pour le groupement des vagues
-
 
 -- tomobil vaovao misafidy non assingé sa tsotra
 -- tomobil niverina misafidy non assingé sa tsotra

@@ -66,6 +66,10 @@ public class SimulationAssignation {
         return Math.abs(placesRestantes - nbPassagers);
     }
 
+    public boolean isPleine() {
+        return placesRestantes == 0;
+    }
+
     // Getters
     public Voiture getVoiture() { return voiture; }
     public void setVoiture(Voiture voiture) {
