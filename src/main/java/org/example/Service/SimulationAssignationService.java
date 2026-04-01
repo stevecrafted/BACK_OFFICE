@@ -170,10 +170,20 @@ public class SimulationAssignationService {
                 Voiture voiture = UtilSimulation.trouverMeilleurVoiture(reservationPourVoiture, toutesVoitures,
                         compteurTrajetsJour, voituresEnTrajet, finFenetreVague, dateSimulation);
                 
+                // Si aucune voiture ne peut prendre tous les passagers, chercher la plus grande disponible
                 if (voiture == null) {
-                    System.out.println(" Aucune voiture disponible pour réservation #" + reservation.getId() + 
-                        " (" + reservation.getIdClient() + ", " + passagersRestants + "p)");
-                    break; // Plus de voitures disponibles pour cette vague
+                    voiture = trouverPlusGrandeVoitureDisponible(toutesVoitures, compteurTrajetsJour, 
+                                                                  voituresEnTrajet, finFenetreVague, dateSimulation);
+                    
+                    if (voiture == null) {
+                        System.out.println(" Aucune voiture disponible pour réservation #" + reservation.getId() + 
+                            " (" + reservation.getIdClient() + ", " + passagersRestants + "p)");
+                        break; // Plus de voitures disponibles pour cette vague
+                    }
+                    
+                    System.out.println(" Split nécessaire: " + reservation.getIdClient() + 
+                        " (" + passagersRestants + "p) → Voiture " + voiture.getRef() + 
+                        " (" + voiture.getCapacite() + " places)");
                 }
                 
                 // Créer l'assignation
@@ -358,14 +368,32 @@ public class SimulationAssignationService {
                     System.out.println(" ✓ Assignation créée avec véhicule de retour: " + 
                         assignationRetour.getVoiture().getRef());
                     
-                    // Retirer les réservations assignées de la liste des non assignées
+                    // Retirer les réservations assignées de toutes les listes
                     for (Reservation r : assignationRetour.getReservations()) {
+                        // Retirer de la liste locale
                         reservationsNonAssignees.removeIf(res -> res.getId() == r.getId());
+                        
+                        // Retirer de la liste globale des réservations à traiter
+                        reservationsATraiter.removeIf(res -> res.getId() == r.getId());
                         
                         // Mettre à jour les passagers restants
                         int passagersAssignes = assignationRetour.getPassagersAssignes(r.getId());
                         int restants = passagersRestantsParReservation.getOrDefault(r.getId(), 0);
-                        passagersRestantsParReservation.put(r.getId(), Math.max(0, restants - passagersAssignes));
+                        int nouveauRestant = Math.max(0, restants - passagersAssignes);
+                        passagersRestantsParReservation.put(r.getId(), nouveauRestant);
+                        
+                        // Si des passagers restent, créer une nouvelle réservation pour eux
+                        if (nouveauRestant > 0) {
+                            Reservation copie = copierReservation(r, nouveauRestant);
+                            // Mettre l'heure à la prochaine disponibilité
+                            Timestamp prochaineDisponibilite = trouverProchaineDisponibilite(
+                                toutesVoitures, voituresEnTrajet, finFenetreVague, dateSimulation);
+                            if (prochaineDisponibilite != null && prochaineDisponibilite.after(copie.getDateHeure())) {
+                                copie.setDateHeure(prochaineDisponibilite);
+                            }
+                            reservationsATraiter.add(copie);
+                            System.out.println(" Reporter " + r.getIdClient() + " (" + nouveauRestant + " passagers) à " + copie.getDateHeure());
+                        }
                     }
                     
                     // Mettre à jour voituresEnTrajet avec l'heure de retour du véhicule utilisé
@@ -585,6 +613,41 @@ public class SimulationAssignationService {
         }
     }
 
+    /**
+     * Trouve la plus grande voiture disponible, même si elle ne peut pas prendre tous les passagers.
+     * Utilisée pour forcer le split des réservations quand aucune voiture n'est assez grande.
+     */
+    private Voiture trouverPlusGrandeVoitureDisponible(List<Voiture> voitures, Map<Integer, Integer> compteurTrajetsJour,
+                                                        Map<Integer, Timestamp> voituresEnTrajet, 
+                                                        Timestamp finFenetreVague, java.sql.Date dateSimulation) {
+        Voiture plusGrande = null;
+        int capaciteMax = 0;
+        
+        for (Voiture v : voitures) {
+            // Vérifier si la voiture est disponible
+            Timestamp disponibiliteReelle = UtilSimulation.combinerDateEtHeure(dateSimulation, v.getDisponibilite());
+            if (voituresEnTrajet.containsKey(v.getIdVoiture())) {
+                Timestamp heureRetour = voituresEnTrajet.get(v.getIdVoiture());
+                if (heureRetour != null && heureRetour.after(disponibiliteReelle)) {
+                    disponibiliteReelle = heureRetour;
+                }
+            }
+            
+            // La voiture doit être disponible avant ou pendant la fenêtre
+            if (disponibiliteReelle.after(finFenetreVague)) {
+                continue;
+            }
+            
+            // Chercher la plus grande capacité
+            if (v.getCapacite() > capaciteMax) {
+                capaciteMax = v.getCapacite();
+                plusGrande = v;
+            }
+        }
+        
+        return plusGrande;
+    }
+
     // ========================================
     // SPRINT 8: FEATURE 2 - Return Trip Assignment
     // ========================================
@@ -650,13 +713,23 @@ public class SimulationAssignationService {
                 heureRetourVehicule + " → Prend " + reservation.getIdClient() + 
                 " (" + passagersAPrendre + " passagers)");
             
+            // Préparer la map des passagers restants pour remplissageOptimal
+            // Inclure toutes les réservations non assignées (y compris celle qu'on vient d'assigner)
             Map<Integer, Integer> passagersRestants = new HashMap<>();
             for (Reservation r : nonAssignees) {
-                if (!assignees.contains(r.getId())) {
+                if (r.getId() == reservation.getId()) {
+                    // Pour la réservation qu'on vient d'assigner, mettre les passagers restants
+                    int restants = reservation.getNbPassager() - passagersAPrendre;
+                    if (restants > 0) {
+                        passagersRestants.put(r.getId(), restants);
+                    }
+                } else if (!assignees.contains(r.getId())) {
+                    // Pour les autres, mettre tous les passagers
                     passagersRestants.put(r.getId(), r.getNbPassager());
                 }
             }
             
+            // Remplir le véhicule avec d'autres réservations si places disponibles
             remplissageOptimal(simulationAssignation, nonAssignees, passagersRestants);
             
             for (Reservation r : simulationAssignation.getReservations()) {
