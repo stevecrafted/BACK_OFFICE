@@ -100,26 +100,23 @@ CREATE TABLE token_validite(
 -- ========================================
 
 -- Voitures (carburant: E=Essence,  D=Diesel)
-INSERT INTO Voiture (Capacite, ref_, carburant, disponibilite) VALUES (5, 'vehicule1', 'D', '09:00:00');
-INSERT INTO Voiture (Capacite, ref_, carburant, disponibilite) VALUES (5, 'vehicule2', 'E', '09:00:00');
-INSERT INTO Voiture (Capacite, ref_, carburant, disponibilite) VALUES (12, 'vehicule3', 'D', '08:00:00');
-INSERT INTO Voiture (Capacite, ref_, carburant, disponibilite) VALUES (9, 'vehicule4', 'D', '09:00:00');
-INSERT INTO Voiture (Capacite, ref_, carburant, disponibilite) VALUES (12, 'vehicule5', 'E', '13:00:00');
+INSERT INTO Voiture (Capacite, ref_, carburant, disponibilite) VALUES (5, 'vehicule1', 'D', '09:00:00'); 
+INSERT INTO Voiture (Capacite, ref_, carburant, disponibilite) VALUES (5, 'vehicule2', 'D', '09:28:00'); 
 
 INSERT INTO lieu (code, libelle, type) VALUES ('AER', 'Aéroport Ivato', 'aeroport');
 INSERT INTO lieu (code, libelle, type) VALUES ('HOT', 'hotel1', 'hotel');  
 INSERT INTO lieu (code, libelle, type) VALUES ('HOT', 'hotel2', 'hotel');  
+INSERT INTO lieu (code, libelle, type) VALUES ('HOT', 'hotel3', 'hotel');  
 
 INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 2, 90);
 INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 3, 35);
-INSERT INTO distance (id_from, id_to, kilometer) VALUES (2, 3, 60);
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (1, 4, 2);
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (2, 3, 60); 
+INSERT INTO distance (id_from, id_to, kilometer) VALUES (3, 4, 50);
 
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client1', 7, '2026-03-19 09:00:00');
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (3, 'client2', 20, '2026-03-19 08:00:00');
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client3', 3, '2026-03-19 09:10:00');
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client4', 10, '2026-03-19 09:15:00');
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client5', 5, '2026-03-19 09:20:00');
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (2, 'client6', 12, '2026-03-19 13:30:00');
+INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (3, 'client1', 8, '2026-03-19 09:00:00');   
+INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (3, 'client2', 5, '2026-03-19 10:23:00');   
+INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure)  VALUES (3, 'client3', 5, '2026-03-19 09:24:00');  
 
 INSERT INTO parametre (nom, valeur) VALUES ('app_version', '2.0.0');
 INSERT INTO parametre (nom, valeur) VALUES ('maintenance_mode', 'false');
@@ -127,43 +124,6 @@ INSERT INTO parametre (nom, valeur) VALUES ('max_reservations_per_day', '100');
 INSERT INTO parametre (nom, valeur) VALUES ('VM', '50'); -- Vitesse Moyenne en km/h
 INSERT INTO parametre (nom, valeur) VALUES ('temps_attente', '30'); -- Temps d'attente en minutes pour le groupement des vagues
 
--- INSERT INTO assignation (id_voiture, date_heure_depart, date_heure_arrivee) VALUES (1, '2026-03-18 00:00:00', '2026-03-18 09:05:00');
 
--- ========================================
--- 4. DONNEES DE TEST - REGLES NA / RETOUR VOITURE
--- Date cible de test: 2026-03-20
--- ========================================
-
--- Vehicules supplementaires pour les scenarios de priorite NA
-INSERT INTO Voiture (Capacite, ref_, carburant, disponibilite) VALUES (7, 'scenario_v1', 'D', '09:00:00');
-INSERT INTO Voiture (Capacite, ref_, carburant, disponibilite) VALUES (4, 'scenario_v2', 'E', '09:00:00');
-INSERT INTO Voiture (Capacite, ref_, carburant, disponibilite) VALUES (6, 'scenario_v3', 'D', '09:30:00');
-INSERT INTO Voiture (Capacite, ref_, carburant, disponibilite) VALUES (4, 'scenario_v4', 'H', '11:20:00');
-
--- Reservations de test (scenes 1/2/3 demandees)
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure) VALUES (2, 'SCN_R1', 7, '2026-03-20 09:00:00');
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure) VALUES (3, 'SCN_R2', 5, '2026-03-20 09:10:00');
-
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure) VALUES (2, 'SCN_R3', 5, '2026-03-20 10:20:00');
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure) VALUES (3, 'SCN_R4', 2, '2026-03-20 10:10:00');
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure) VALUES (2, 'SCN_R5', 4, '2026-03-20 10:10:00');
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure) VALUES (3, 'SCN_R6', 7, '2026-03-20 10:30:00');
-
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure) VALUES (2, 'SCN_R7', 5, '2026-03-20 11:20:00');
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure) VALUES (3, 'SCN_R8', 2, '2026-03-20 11:20:00');
-INSERT INTO reservations (id_lieu, id_client, nbPassager, date_heure) VALUES (2, 'SCN_R9', 3, '2026-03-20 11:30:00');
-
--- Intervalles occupes existants en base pour simuler les retours voiture
--- scenario_v1 et scenario_v2 reviennent a 10:10
-INSERT INTO assignation (id_voiture, date_heure_depart, date_heure_arrivee)
-SELECT idVoiture, '2026-03-20 09:20:00', '2026-03-20 10:10:00' FROM Voiture WHERE ref_ = 'scenario_v1';
-
-INSERT INTO assignation (id_voiture, date_heure_depart, date_heure_arrivee)
-SELECT idVoiture, '2026-03-20 09:30:00', '2026-03-20 10:10:00' FROM Voiture WHERE ref_ = 'scenario_v2';
-
--- scenario_v3 revient a 11:20 pour la derniere scene
-INSERT INTO assignation (id_voiture, date_heure_depart, date_heure_arrivee)
-SELECT idVoiture, '2026-03-20 10:40:00', '2026-03-20 11:20:00' FROM Voiture WHERE ref_ = 'scenario_v3';
-
--- Parametre recommande pour reproduire exactement les scenes
--- UPDATE parametre SET valeur = '60' WHERE nom = 'temps_attente';
+-- tomobil vaovao misafidy non assingé sa tsotra
+-- tomobil niverina misafidy non assingé sa tsotra
